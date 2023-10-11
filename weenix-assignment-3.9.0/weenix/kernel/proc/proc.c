@@ -220,8 +220,33 @@ failed:
 proc_t *
 proc_create(char *name)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_create");
-        return NULL;
+//        NOT_YET_IMPLEMENTED("PROCS: proc_create");
+        proc_t *p = (proc_t *) slab_obj_alloc(proc_allocator);
+
+        int pid = _proc_getid();
+        p->p_pid = pid;
+
+        strncpy(p->p_comm, name, PROC_NAME_LEN);
+        p->p_comm[PROC_NAME_LEN - 1] = '\0';
+
+        list_init(&(p->p_threads));
+        list_init(&(p->p_children));
+
+        if(curproc != NULL){
+            list_insert_tail(&(curproc->p_children), &(p->p_child_link));
+        }
+        p->p_pproc = curproc;
+
+        if(pid == PID_INIT){
+            proc_initproc = p;
+        }
+
+        sched_queue_init(&p->p_wait);
+        p->p_pagedir = pt_create_pagedir();
+
+        list_insert_tail(proc_list(), &p->p_list_link);
+        p->p_state = PROC_RUNNING;
+        return p;
 }
 
 /**
