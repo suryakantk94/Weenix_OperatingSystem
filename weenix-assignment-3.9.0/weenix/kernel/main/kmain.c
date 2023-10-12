@@ -165,7 +165,7 @@ initproc_create(void)
 {
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_create");
         proc_t *initproc = proc_create("initproc");
-        kthread_t *t = kthread_create(initproc, (kthread_func_t) initproc_run)
+        kthread_t *t = kthread_create(initproc, (kthread_func_t) initproc_run, NULL, NULL);
         return t;
 }
 
