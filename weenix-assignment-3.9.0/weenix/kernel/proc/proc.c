@@ -280,7 +280,7 @@ void
 proc_cleanup(int status)
 {
         proc_t *parent = curproc->p_pproc;
-        if(!sched_queue_empty(parent->p_wait)){
+        if(!sched_queue_empty(&(parent->p_wait))){
 //            Parent proc is waiting. Have to wake it up
             sched_wakeup_on(&(parent->p_wait));
         }
