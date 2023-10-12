@@ -351,7 +351,8 @@ proc_thread_exited(void *retval)
 {
 //        NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");
         proc_cleanup((int)retval);
-//        TODO figure out how to schedule new thread to run
+//        TODO verify schedule new thread to run
+        sched_switch();
 }
 
 /* If pid is -1 dispose of one of the exited children of the current
