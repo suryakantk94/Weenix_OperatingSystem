@@ -316,7 +316,7 @@ proc_kill(proc_t *p, int status)
             list_iterate_begin(&(curproc->p_threads), k, kthread_t, kt_plink){
 //                TODO check if kt_cancelled has to be set to 1 or if kthread_cancel has to be called
                 k->kt_cancelled = 1;
-//                kthread_cancel(k, (void*) status);
+                kthread_cancel(k, (void*) status);
             }list_iterate_end();
         }
 
@@ -351,7 +351,6 @@ proc_thread_exited(void *retval)
 {
 //        NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");
         proc_cleanup((int)retval);
-//        TODO verify schedule new thread to run
         sched_switch();
 }
 
@@ -373,8 +372,66 @@ proc_thread_exited(void *retval)
 pid_t
 do_waitpid(pid_t pid, int options, int *status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: do_waitpid");
-        return 0;
+//        NOT_YET_IMPLEMENTED("PROCS: do_waitpid");
+        pid_t dead_pid = -1;
+        if(list_empty(&(curproc->p_children))){
+            return -ECHILD;
+        }
+        if(pid == -1){
+            do {
+                list_iterate_begin(&(curproc->p_children), p, proc_t, p_child_link)
+                {
+                    if (p->p_state == PROC_DEAD) {
+                        dead_pid = p->p_pid;
+                        if (status != NULL) {
+                            *status = p->p_status;
+                        }
+
+                        list_iterate_begin(&(curproc->p_threads), t, kthread_t, kt_plink)
+                        {
+                            kthread_destroy(t);
+                        }
+                        list_iterate_end();
+
+                        list_remove(&(p->p_list_link));
+                        list_remove(&(p->p_child_link));
+                        pt_pagedir_destroy(p->pagedir_t);
+                        slab_obj_free(proc_allocater, p);
+
+                        return dead_pid;
+                    }
+                }
+                list_iterate_end();
+                sched_sleep_on(&(curproc->p_wait));
+            } while (1);
+
+        }else if(pid>0){
+            list_iterate_begin(&(curproc->p_children, p, proc_t, p_child_link)){
+                if(p->p_id == pid){
+                    while(p->p_state != PROC_DEAD){
+//                        Wait for the process to exit
+                        sched_sleep_on(&(cuproc->p_wait));
+                    }
+//                    Process is now dead
+                    dead_pid = p->p_pid;
+                    if(status!=NULL){
+                        *status = p->p_status;
+                    }
+
+                    list_iterate_begin(&(curproc->p_threads), t, kthread_t, kt_plink){
+                        kthread_destroy(t);
+                    }list_iterate_end();
+
+                    list_remove(&(p->p_list_link));
+                    list_remove(&(p->p_child_link));
+                    pt_pagedir_destroy(p->pagedir_t);
+                    slab_obj_free(proc_allocater, p);
+
+                    return dead_pid;
+                }
+            }list_iterate_end();
+        }
+        return -ECHILD;
 }
 
 /*
