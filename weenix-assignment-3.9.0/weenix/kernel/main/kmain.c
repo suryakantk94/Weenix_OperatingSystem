@@ -93,10 +93,12 @@ bootstrap(int arg1, void *arg2)
         /* necessary to finalize page table information */
         pt_template_init();
 
-        NOT_YET_IMPLEMENTED("PROCS: bootstrap");
-
+//        NOT_YET_IMPLEMENTED("PROCS: bootstrap");
+        curproc = proc_create("idleproc");
+        curthr = kthread_create(curproc,(kthread_func_t) idleproc_run, arg1, arg2);
+        context_make_active(&(curthr->kt_ctx));
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
-        return NULL;
+//        return NULL;
 }
 
 /**
@@ -161,8 +163,10 @@ idleproc_run(int arg1, void *arg2)
 kthread_t *
 initproc_create(void)
 {
-        NOT_YET_IMPLEMENTED("PROCS: initproc_create");
-        return NULL;
+//        NOT_YET_IMPLEMENTED("PROCS: initproc_create");
+        proc_t *initproc = proc_create("initproc");
+        kthread_t *t = kthread_create(initproc, (kthread_func_t) initproc_run, NULL, NULL);
+        return t;
 }
 
 
@@ -180,7 +184,7 @@ initproc_create(void)
 void *
 initproc_run(int arg1, void *arg2)
 {
-        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
+//        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
 
         return NULL;
 }
