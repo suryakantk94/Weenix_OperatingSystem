@@ -95,10 +95,11 @@ bootstrap(int arg1, void *arg2)
 
 //        NOT_YET_IMPLEMENTED("PROCS: bootstrap");
         curproc = proc_create("idleproc");
-        curthr = kthread_create(curproc,(kthread_func_t) idleproc_run, arg1, arg2);
+        curthr = kthread_create(curproc,(kthread_func_t) idleproc_run, 0, NULL);
+        curthr->kt_state = KT_RUN;
         context_make_active(&(curthr->kt_ctx));
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
-//        return NULL;
+       return NULL;
 }
 
 /**
