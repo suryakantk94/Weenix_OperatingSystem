@@ -36,8 +36,6 @@ sched_init(void)
 }
 init_func(sched_init);
 
-
-
 /*** PRIVATE KTQUEUE MANIPULATION FUNCTIONS ***/
 /**
  * Enqueues a thread onto a queue.
@@ -45,8 +43,7 @@ init_func(sched_init);
  * @param q the queue to enqueue the thread onto
  * @param thr the thread to enqueue onto the queue
  */
-void
-ktqueue_enqueue(ktqueue_t *q, kthread_t *thr)
+void ktqueue_enqueue(ktqueue_t *q, kthread_t *thr)
 {
         KASSERT(!thr->kt_wchan);
         list_insert_head(&q->tq_list, &thr->kt_qlink);
@@ -95,15 +92,13 @@ ktqueue_remove(ktqueue_t *q, kthread_t *thr)
 }
 
 /*** PUBLIC KTQUEUE MANIPULATION FUNCTIONS ***/
-void
-sched_queue_init(ktqueue_t *q)
+void sched_queue_init(ktqueue_t *q)
 {
         list_init(&q->tq_list);
         q->tq_size = 0;
 }
 
-int
-sched_queue_empty(ktqueue_t *q)
+int sched_queue_empty(ktqueue_t *q)
 {
         return list_empty(&q->tq_list);
 }
@@ -115,11 +110,27 @@ sched_queue_empty(ktqueue_t *q)
  *
  * Use the private queue manipulation functions above.
  */
-int
-sched_cancellable_sleep_on(ktqueue_t *q)
+int sched_cancellable_sleep_on(ktqueue_t *q)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on");
-        return 0;
+        // NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on");
+        // return 0;
+
+        // KASSERT(curthr && (curthr != idlethr)); // curthr is not NULL and is not idlethr
+        // KASSERT(!curthr->kt_wchan);            // curthr is not already sleeping
+
+        curthr->kt_state = KT_SLEEP_CANCELLABLE; // set state to sleep cancellable
+        curthr->kt_wchan = q;                    // set wait channel to q
+
+        ktqueue_enqueue(q, curthr); // enqueue curthr onto q
+
+        sched_switch(); // switch to next thread
+
+        if (curthr->kt_cancelled) // if curthr was cancelled
+        {
+                return -EINTR; // return -EINTR
+        }
+
+        return 0; // return 0
 }
 
 /*
@@ -131,10 +142,21 @@ sched_cancellable_sleep_on(ktqueue_t *q)
  * state, it should be on some queue. Otherwise, it will never be run
  * again.
  */
-void
-sched_cancel(struct kthread *kthr)
+void sched_cancel(struct kthread *kthr)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_cancel");
+        // NOT_YET_IMPLEMENTED("PROCS: sched_cancel");
+
+        if (kthr->kt_state != KT_NO_STATE && kthr->kt_state != KT_EXITED) // if kthr is not in KT_NO_STATE or KT_EXITED
+        {
+                kthr->kt_cancelled = 1;                     // set kt_cancelled to 1
+                if (kthr->kt_state == KT_SLEEP_CANCELLABLE) // if kthr is in KT_SLEEP_CANCELLABLE
+                {
+                        ktqueue_remove(kthr->kt_wchan, kthr); // remove kthr from its wait channel
+                        sched_make_runnable(kthr);            // make kthr runnable
+                }
+        }
+
+        return; // return
 }
 
 /*
@@ -173,12 +195,31 @@ sched_cancel(struct kthread *kthr)
  *
  * Note: The IPL is process specific.
  */
-void
-sched_switch(void)
-{
-        NOT_YET_IMPLEMENTED("PROCS: sched_switch");
-}
 
+void sched_switch(void)
+{
+        // NOT_YET_IMPLEMENTED("PROCS: sched_switch");
+        kthread_t *OldThread;
+        uint8_t oldIPL;
+        oldIPL = intr_getipl();
+        // intr_setipl(IPL_HIGH);
+        intr_disable();
+        while (sched_queue_empty(&kt_runq))
+        {
+                // intr_setipl(IPL_LOW);
+                // HLT;
+                intr_wait();
+                intr_disable();
+                // intr_setipl(IPL_HIGH);
+        }
+        OldThread = curthr;
+        curthr = ktqueue_dequeue(&kt_runq);
+        curproc = curthr->kt_proc;
+        context_switch(&OldThread->kt_ctx, &curthr->kt_ctx);
+        intr_setipl(oldIPL);
+
+        // dbg();
+}
 /*
  * Since we are modifying the run queue, we _MUST_ set the IPL to high
  * so that no interrupts happen at an inopportune moment.
@@ -192,9 +233,17 @@ sched_switch(void)
  * more fine grained control, making modifying the IPL more
  * suitable. We modify the IPL here for consistency.
  */
-void
-sched_make_runnable(kthread_t *thr)
+void sched_make_runnable(kthread_t *thr)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");
-}
+        // NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");
 
+        uint8_t oldIPL; // protect access to RunQueue by
+                        // masking all interrupts
+        oldIPL = intr_getipl();
+        intr_setipl(IPL_HIGH);
+        thr->kt_state = KT_RUN;         // set thr's state to KT_RUN
+        ktqueue_enqueue(&kt_runq, thr); // enqueue thr onto RunQueue
+        intr_setipl(oldIPL);            // restore IPL to original value
+
+        return;
+}
