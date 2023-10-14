@@ -103,8 +103,38 @@ kthread_destroy(kthread_t *t)
 kthread_t *
 kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kthread_create");
-        return NULL;
+        // NOT_YET_IMPLEMENTED("PROCS: kthread_create");
+        // Memory allocation for the new kthread
+        kthread_t *newKThread = (kthread_t*)slab_obj_alloc(kthread_allocator); 
+
+        // Zero out all the fields
+        memset(newKThread, 0, sizeof(kthread_t));
+
+        // Assign the kernel stack for the thread
+        newKThread->kt_kstack = alloc_stack();
+
+        // Set the process for the thread
+        newKThread->kt_proc = p;
+
+        // Set the initial state of the thread
+        newKThread->kt_state = (p->p_pid == PID_IDLE) ? KT_RUN : KT_NO_STATE;
+
+        newKThread->kt_wchan = NULL;
+        newKThread->kt_retval=0;
+        newKThread->kt_errno=0;
+        newKThread->kt_cancelled=0;
+
+        // Initialize the list links
+        list_link_init(&newKThread->kt_qlink);
+        list_link_init(&newKThread->kt_plink);
+
+        // Connect the thread to the process's list of threads
+        list_insert_tail(&p->p_threads, &newKThread->kt_plink);
+
+        // Setup the thread's execution context
+        context_setup(&newKThread->kt_ctx, func, arg1, arg2, newKThread->kt_kstack, DEFAULT_STACK_SIZE, p->p_pagedir);
+        
+        return newKThread;
 }
 
 /*
@@ -124,7 +154,23 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 void
 kthread_cancel(kthread_t *kthr, void *retval)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");
+        // NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");
+         
+        // If the thread to be canceled is the current thread, exit it
+        if (kthr == curthr) {
+                kthread_exit(retval);
+        }
+
+        // Set the return value and cancellation flag
+        kthr->kt_retval = retval;
+        kthr->kt_cancelled = 1;
+
+        // Handle cancellable states and cancel the thread if applicable
+        if (kthr->kt_state == KT_SLEEP || 
+                kthr->kt_state == KT_SLEEP_CANCELLABLE || 
+                kthr->kt_state == KT_RUN) {
+                sched_cancel(kthr);
+        }
 }
 
 /*
@@ -145,7 +191,11 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kthread_exit");
+        // NOT_YET_IMPLEMENTED("PROCS: kthread_exit");
+        curthr->kt_retval = retval;
+        curthr->kt_state = KT_EXITED;
+        proc_thread_exited(retval);
+        sched_switch();
 }
 
 /*
