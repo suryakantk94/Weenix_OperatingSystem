@@ -51,7 +51,7 @@ kthread_t *
 sched_wakeup_on(ktqueue_t *q)
 {
         //NOT_YET_IMPLEMENTED("PROCS: sched_wakeup_on");
-        kthread_t wokeThread = ktqueue_dequeue(q);
+        kthread_t *wokeThread = ktqueue_dequeue(q); // should return NULL if empty
         if(wokeThread != NULL){
                 KASSERT((wokeThread->kt_state == KT_SLEEP) || (wokeThread->kt_state == KT_SLEEP_CANCELLABLE));
                 sched_make_runnable(wokeThread);
