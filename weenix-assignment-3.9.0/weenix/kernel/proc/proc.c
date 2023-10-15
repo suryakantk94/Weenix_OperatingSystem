@@ -311,11 +311,6 @@ proc_create(char *name)
 void proc_cleanup(int status)
 {
         proc_t *parent = curproc->p_pproc;
-        if (!sched_queue_empty(&(parent->p_wait)))
-        {
-                //            Parent proc is waiting. Have to wake it up
-                sched_wakeup_on(&(parent->p_wait));
-        }
         if (curproc != proc_initproc)
         {
                 //        Reparenting with initproc
@@ -330,6 +325,12 @@ void proc_cleanup(int status)
         //        Setting appropriate state and status
         curproc->p_status = status;
         curproc->p_state = PROC_DEAD;
+        if (!sched_queue_empty(&(parent->p_wait)))
+        {
+                //            Parent proc is waiting. Have to wake it up
+                sched_wakeup_on(&(parent->p_wait));
+        }
+        
 }
 
 /*
@@ -432,7 +433,8 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
                                         kthread_t *t;
                                         list_iterate_begin(&(curproc->p_threads), t, kthread_t, kt_plink)
                                         {
-                                                kthread_destroy(t);
+                                                if(t->kt_state != KT_EXITED)
+                                                        kthread_destroy(t);
                                         }
                                         list_iterate_end();
 
@@ -469,7 +471,8 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
                                 kthread_t *t;
                                 list_iterate_begin(&(curproc->p_threads), t, kthread_t, kt_plink)
                                 {
-                                        kthread_destroy(t);
+                                        if(t->kt_state != KT_EXITED)
+                                                kthread_destroy(t);
                                 }
                                 list_iterate_end();
 
@@ -499,7 +502,7 @@ void do_exit(int status)
         {
                 //            TODO check if cancelled has to be set here or if kthread_cancel has to be called here
                 k->kt_cancelled = 1;
-                //            kthread_cancel(k, (void*) status);
+                           kthread_cancel(k, (void*) status);
         }
         list_iterate_end();
         kthread_exit((void *)status);

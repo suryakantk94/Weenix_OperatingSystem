@@ -186,6 +186,6 @@ void *
 initproc_run(int arg1, void *arg2)
 {
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
-
-        return NULL;
+        // dbg(DBG_PRINT,"INITPROC RAN!");
+        // return NULL;
 }
