@@ -317,6 +317,7 @@ void proc_cleanup(int status)
                 proc_t *p;
                 list_iterate_begin(&curproc->p_children, p, proc_t, p_child_link)
                 {
+                        list_remove(&p->p_child_link);
                         list_insert_tail(&(proc_initproc->p_children), &(p->p_child_link));
                         p->p_pproc = proc_initproc;
                 }

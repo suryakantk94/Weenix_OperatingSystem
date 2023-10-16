@@ -195,7 +195,7 @@ kthread_exit(void *retval)
         curthr->kt_retval = retval;
         curthr->kt_state = KT_EXITED;
         proc_thread_exited(retval);
-        // sched_switch();
+        sched_switch();
 }
 
 /*

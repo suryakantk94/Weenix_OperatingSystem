@@ -119,7 +119,7 @@ int sched_cancellable_sleep_on(ktqueue_t *q)
         // KASSERT(!curthr->kt_wchan);            // curthr is not already sleeping
 
         curthr->kt_state = KT_SLEEP_CANCELLABLE; // set state to sleep cancellable
-        curthr->kt_wchan = q;                    // set wait channel to q
+        //curthr->kt_wchan = q;                    // set wait channel to q
 
         ktqueue_enqueue(q, curthr); // enqueue curthr onto q
 
