@@ -117,6 +117,10 @@ int sched_cancellable_sleep_on(ktqueue_t *q)
 
         // KASSERT(curthr && (curthr != idlethr)); // curthr is not NULL and is not idlethr
         // KASSERT(!curthr->kt_wchan);            // curthr is not already sleeping
+        if (curthr->kt_cancelled) // if curthr was cancelled
+        {
+                return -EINTR; // return -EINTR
+        }
 
         curthr->kt_state = KT_SLEEP_CANCELLABLE; // set state to sleep cancellable
         //curthr->kt_wchan = q;                    // set wait channel to q

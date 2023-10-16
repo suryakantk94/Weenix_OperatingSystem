@@ -189,4 +189,5 @@ initproc_run(int arg1, void *arg2)
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
         // dbg(DBG_PRINT,"INITPROC RAN!");
         // return NULL;
+        faber_thread_test();
 }

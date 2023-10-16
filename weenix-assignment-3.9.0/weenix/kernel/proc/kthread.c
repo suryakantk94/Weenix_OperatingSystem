@@ -207,7 +207,7 @@ kthread_exit(void *retval)
         dbg(DBG_PRINT, "(GRADING1A 3.c)\n");
 
         proc_thread_exited(retval);
-        sched_switch();
+        // sched_switch();
 }
 
 /*
