@@ -443,7 +443,7 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
                                                 *status = p->p_status;
                                         }
                                         kthread_t *t;
-                                        list_iterate_begin(&(curproc->p_threads), t, kthread_t, kt_plink)
+                                        list_iterate_begin(&(p->p_threads), t, kthread_t, kt_plink)
                                         {
                                                 if(t->kt_state != KT_EXITED)
                                                         kthread_destroy(t);
@@ -490,7 +490,7 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
                                         *status = p->p_status;
                                 }
                                 kthread_t *t;
-                                list_iterate_begin(&(curproc->p_threads), t, kthread_t, kt_plink)
+                                list_iterate_begin(&(p->p_threads), t, kthread_t, kt_plink)
                                 {
                                         if(t->kt_state != KT_EXITED)
                                                 kthread_destroy(t);
