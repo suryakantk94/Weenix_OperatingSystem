@@ -271,6 +271,10 @@ proc_create(char *name)
         }
         p->p_pproc = curproc;
 
+        KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid);
+        KASSERT(PID_IDLE != pid || list_empty(&_proc_list));
+        dbg(DBG_PRINT, "(GRADING1A 2.a)\n");
+
         if (pid == PID_INIT)
         {
                 proc_initproc = p;
@@ -310,6 +314,11 @@ proc_create(char *name)
  */
 void proc_cleanup(int status)
 {
+        KASSERT(NULL != proc_initproc);
+        KASSERT(1 <= curproc->p_pid);
+        KASSERT(NULL != curproc->p_pproc);
+        dbg(DBG_PRINT, "(GRADING1A 2.b)\n");
+
         proc_t *parent = curproc->p_pproc;
         if (curproc != proc_initproc)
         {
@@ -331,7 +340,9 @@ void proc_cleanup(int status)
                 //            Parent proc is waiting. Have to wake it up
                 sched_wakeup_on(&(parent->p_wait));
         }
-        
+        KASSERT(NULL != curproc->p_pproc);
+        KASSERT(KT_EXITED == curthr->kt_state);
+        dbg(DBG_PRINT, "(GRADING1A 2.b)\n");
 }
 
 /*
@@ -441,13 +452,22 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
 
                                         list_remove(&(p->p_list_link));
                                         list_remove(&(p->p_child_link));
-                                        pt_destroy_pagedir(p->p_pagedir);
-                                        slab_obj_free(proc_allocator, p);
 
+                                        KASSERT(NULL != p);
+                                        KASSERT(-1 == pid || p->p_pid == pid);
+                                        KASSERT(NULL != p->p_pagedir);
+                                        dbg(DBG_PRINT, "(GRADING1A 2.c)\n");
+
+                                        pt_destroy_pagedir(p->p_pagedir);
+                                        dbg(DBG_PRINT, "(GRADING1C)\n");
+
+                                        slab_obj_free(proc_allocator, p);
+                                        dbg(DBG_PRINT, "(GRADING1C)\n");
                                         return dead_pid;
                                 }
                         }
                         list_iterate_end();
+                        dbg(DBG_PRINT, "(GRADING1A)\n");
                         sched_sleep_on(&(curproc->p_wait));
                 } while (1);
         }
@@ -479,13 +499,22 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
 
                                 list_remove(&(p->p_list_link));
                                 list_remove(&(p->p_child_link));
-                                pt_destroy_pagedir(p->p_pagedir);
-                                slab_obj_free(proc_allocator, p);
 
+                                KASSERT(NULL != p);
+                                KASSERT(-1 == pid || p->p_pid == pid);
+                                KASSERT(NULL != p->p_pagedir);
+                                dbg(DBG_PRINT, "(GRADING1A 2.c)\n");
+
+                                pt_destroy_pagedir(p->p_pagedir);
+                                dbg(DBG_PRINT, "(GRADING1C)\n");
+
+                                slab_obj_free(proc_allocator, p);
+                                dbg(DBG_PRINT, "(GRADING1C)\n");
                                 return dead_pid;
                         }
                 }
                 list_iterate_end();
+                dbg(DBG_PRINT, "(GRADING1A)\n");
         }
         return -ECHILD;
 }
