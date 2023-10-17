@@ -363,7 +363,7 @@ void proc_kill(proc_t *p, int status)
         else
         {
                 kthread_t *k;
-                list_iterate_begin(&(curproc->p_threads), k, kthread_t, kt_plink)
+                list_iterate_begin(&(p->p_threads), k, kthread_t, kt_plink)
                 {
                         //                TODO check if kt_cancelled has to be set to 1 or if kthread_cancel has to be called
                         k->kt_cancelled = 1;
