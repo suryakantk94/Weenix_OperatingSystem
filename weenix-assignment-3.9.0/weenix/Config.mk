@@ -10,7 +10,7 @@
 # Setting any of these variables will control which parts of the source tree
 # are built. To enable something set it to 1, otherwise set it to 0.
 #
-     DRIVERS=0
+     DRIVERS=1
          VFS=0
         S5FS=0
           VM=0
@@ -41,7 +41,7 @@
 
 # Set which CS402 tests are to run.  Valid from 0 (no tests except running init)
 # to 10 (run all tests plus student tests).
-        CS402TESTS=8
+        CS402TESTS=10
 
 # Currently, CS402INITCHOICE is not used in the kernel.  You can use it for
 # anything you want (mainly to select which way to go in initproc_run()).
@@ -63,7 +63,7 @@
 # changed at runtime by modifying the dbg_modes global variable.
 #
 # All debug statements
-        DBG=all,-thr,-pagealloc,-mm
+        # DBG=all,-thr,-pagealloc,-mm
 # Change to this if the above causes the debug printout window to freeze
 #       DBG=all,-thr,-pagealloc,-mm
 # Change to this for no debug statements
@@ -73,7 +73,7 @@
 # Grading: (the grader will use the next line for grading "SELF-checks" and section (A) of grading guidelines)
 #       DBG = error,print,test
 # Grading: (the grader will use the next line when grading in general, i.e., will not see things printed with DBG_PRINT)
-#       DBG = error,test
+      DBG = error,test
 # Other examples:
 #       DBG = error,temp,test
 #       DBG = error,temp,print,test

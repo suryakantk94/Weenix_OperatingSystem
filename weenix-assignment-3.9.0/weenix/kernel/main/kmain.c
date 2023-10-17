@@ -72,6 +72,12 @@ kthread_t *initproc_create(void);
 void      *initproc_run(int arg1, void *arg2);
 void      *final_shutdown(void);
 
+extern void *faber_thread_test(int, void*);
+extern void *sunghan_test(int, void*);
+extern void *sunghan_deadlock_test(int, void*);
+extern int faber_fs_thread_test(kshell_t *ksh, int argc, char **argv);
+extern int faber_directory_test(kshell_t *ksh, int argc, char **argv);
+extern void *vfstest_main(int, void*);
 /**
  * This function is called from kmain, however it is not running in a
  * thread context yet. It should create the idle process which will
@@ -183,10 +189,10 @@ int do_faber_test(kshell_t *kshell, int argc, char **argv){
     return 0;
 }
 
-int do_shungan_test(kshell_t *kshell, int argc, char **argv){
+int do_sunghan_test(kshell_t *kshell, int argc, char **argv){
     KASSERT(NULL != kshell);
-    proc_t *p = proc_create("shungan_test");
-    kthread_t *t = kthread_create(p, shungan_test, 0, NULL);
+    proc_t *p = proc_create("sunghan_test");
+    kthread_t *t = kthread_create(p, sunghan_test, 0, NULL);
     int status;
 
     sched_make_runnable(t);
@@ -194,10 +200,10 @@ int do_shungan_test(kshell_t *kshell, int argc, char **argv){
     return 0;
 }
 
-int do_shungan_deadlock_test(kshell_t *kshell, int argc, char **argv){
+int do_sunghan_deadlock_test(kshell_t *kshell, int argc, char **argv){
     KASSERT(NULL != kshell);
-    proc_t *p = proc_create("shungan_deadlock_test");
-    kthread_t *t = kthread_create(p, shungan_deadlock_test, 0, NULL);
+    proc_t *p = proc_create("sunghan_deadlock_test");
+    kthread_t *t = kthread_create(p, sunghan_deadlock_test, 0, NULL);
     int status;
 
     sched_make_runnable(t);
@@ -227,8 +233,8 @@ initproc_run(int arg1, void *arg2)
     #ifdef __DRIVERS__
 
         kshell_add_command("faber-test", do_faber_test, "invoke do_faber_test()...");
-        kshell_add_command("shungan-test", do_shungan_test, "invoke do_shungan_test()...");
-        kshell_add_command("sunghan-deadlock-test", do_shungan_deadlock_test, "invoke do_shungan_deadlock_test()...");
+        kshell_add_command("sunghan-test", do_sunghan_test, "invoke do_shungan_test()...");
+        kshell_add_command("sunghan-deadlock-test", do_sunghan_deadlock_test, "invoke do_shungan_deadlock_test()...");
 
         kshell_t *kshell = kshell_create(0);
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");

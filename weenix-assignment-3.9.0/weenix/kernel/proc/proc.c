@@ -370,6 +370,7 @@ void proc_kill(proc_t *p, int status)
                         kthread_cancel(k, (void *)status);
                 }
                 list_iterate_end();
+                        // p->p_status = status;
         }
 }
 
@@ -385,7 +386,8 @@ void proc_kill_all()
         proc_t *p;
         list_iterate_begin(&(_proc_list), p, proc_t, p_list_link)
         {
-                proc_kill(p, 0);
+                if(p->p_pid != PID_IDLE && p->p_pproc->p_pid != PID_IDLE)
+                        proc_kill(p, 0);
         }
         list_iterate_end();
 }

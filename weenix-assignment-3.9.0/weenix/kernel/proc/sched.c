@@ -206,15 +206,15 @@ void sched_switch(void)
         kthread_t *OldThread;
         uint8_t oldIPL;
         oldIPL = intr_getipl();
-        // intr_setipl(IPL_HIGH);
-        intr_disable();
+        intr_setipl(IPL_HIGH);
         while (sched_queue_empty(&kt_runq))
         {
-                // intr_setipl(IPL_LOW);
+        intr_disable();
+                intr_setipl(IPL_LOW);
                 // HLT;
                 intr_wait();
-                intr_disable();
-                // intr_setipl(IPL_HIGH);
+                // intr_disable();
+                intr_setipl(IPL_HIGH);
         }
         OldThread = curthr;
         curthr = ktqueue_dequeue(&kt_runq);
