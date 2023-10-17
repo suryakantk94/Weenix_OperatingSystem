@@ -72,6 +72,13 @@ kthread_t *initproc_create(void);
 void      *initproc_run(int arg1, void *arg2);
 void      *final_shutdown(void);
 
+extern void faber_thread_test(int, void);
+extern void sunghan_test(int, void);
+extern void sunghan_deadlock_test(int, void);
+extern int faber_fs_thread_test(kshell_t *ksh, int argc, char **argv);
+extern int faber_directory_test(kshell_t *ksh, int argc, char **argv);
+extern void vfstest_main(int, void);
+
 /**
  * This function is called from kmain, however it is not running in a
  * thread context yet. It should create the idle process which will
