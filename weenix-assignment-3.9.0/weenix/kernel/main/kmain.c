@@ -171,6 +171,41 @@ initproc_create(void)
         return t;
 }
 
+#ifdef __DRIVERS__
+int do_faber_test(kshell_t *kshell, int argc, char **argv){
+    KASSERT(NULL != kshell);
+    proc_t *p = proc_create("faber_test");
+    kthread_t *t = kthread_create(p, faber_thread_test, 0, NULL);
+    int status;
+
+    sched_make_runnable(t);
+    int child = do_waitpid(p->p_pid, 0, &status);
+    return 0;
+}
+
+int do_shungan_test(kshell_t *kshell, int argc, char **argv){
+    KASSERT(NULL != kshell);
+    proc_t *p = proc_create("shungan_test");
+    kthread_t *t = kthread_create(p, shungan_test, 0, NULL);
+    int status;
+
+    sched_make_runnable(t);
+    int child = do_waitpid(p->p_pid, 0, &status);
+    return 0;
+}
+
+int do_shungan_deadlock_test(kshell_t *kshell, int argc, char **argv){
+    KASSERT(NULL != kshell);
+    proc_t *p = proc_create("shungan_deadlock_test");
+    kthread_t *t = kthread_create(p, shungan_deadlock_test, 0, NULL);
+    int status;
+
+    sched_make_runnable(t);
+    int child = do_waitpid(p->p_pid, 0, &status);
+    return 0;
+}
+#endif /* __DRIVERS__ */
+
 
 /**
  * The init thread's function changes depending on how far along your Weenix is
@@ -189,5 +224,17 @@ initproc_run(int arg1, void *arg2)
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
         // dbg(DBG_PRINT,"INITPROC RAN!");
         // return NULL;
-        faber_thread_test();
+    #ifdef __DRIVERS__
+
+        kshell_add_command("faber-test", do_faber_test, "invoke do_faber_test()...");
+        kshell_add_command("shungan-test", do_shungan_test, "invoke do_shungan_test()...");
+        kshell_add_command("sunghan-deadlock-test", do_shungan_deadlock_test, "invoke do_shungan_deadlock_test()...");
+
+        kshell_t *kshell = kshell_create(0);
+        if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
+        while (kshell_execute_next(kshell));
+        kshell_destroy(kshell);
+
+    #endif /* __DRIVERS__ */
+    return NULL;
 }
