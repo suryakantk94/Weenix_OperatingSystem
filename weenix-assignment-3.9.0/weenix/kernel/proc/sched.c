@@ -119,8 +119,11 @@ int sched_cancellable_sleep_on(ktqueue_t *q)
         // KASSERT(!curthr->kt_wchan);            // curthr is not already sleeping
         if (curthr->kt_cancelled) // if curthr was cancelled
         {
+                                dbg(DBG_PRINT, "(GRADING1A)\n");
+
                 return -EINTR; // return -EINTR
         }
+                dbg(DBG_PRINT, "(GRADING1A)\n");
 
         curthr->kt_state = KT_SLEEP_CANCELLABLE; // set state to sleep cancellable
         //curthr->kt_wchan = q;                    // set wait channel to q
@@ -131,8 +134,11 @@ int sched_cancellable_sleep_on(ktqueue_t *q)
 
         if (curthr->kt_cancelled) // if curthr was cancelled
         {
+                                dbg(DBG_PRINT, "(GRADING1A)\n");
+
                 return -EINTR; // return -EINTR
         }
+        dbg(DBG_PRINT, "(GRADING1A)\n");
 
         return 0; // return 0
 }
@@ -157,8 +163,11 @@ void sched_cancel(struct kthread *kthr)
                 {
                         ktqueue_remove(kthr->kt_wchan, kthr); // remove kthr from its wait channel
                         sched_make_runnable(kthr);            // make kthr runnable
+                                        dbg(DBG_PRINT, "(GRADING1C)\n");
+
                 }
         }
+        dbg(DBG_PRINT, "(GRADING1C)\n");
 
         return; // return
 }
@@ -203,6 +212,7 @@ void sched_cancel(struct kthread *kthr)
 void sched_switch(void)
 {
         // NOT_YET_IMPLEMENTED("PROCS: sched_switch");
+                dbg(DBG_PRINT, "(GRADING1A)\n");
         kthread_t *OldThread;
         uint8_t oldIPL;
         oldIPL = intr_getipl();
@@ -215,12 +225,15 @@ void sched_switch(void)
                 intr_wait();
                 // intr_disable();
                 intr_setipl(IPL_HIGH);
+                                dbg(DBG_PRINT, "(GRADING1A)\n");
+
         }
         OldThread = curthr;
         curthr = ktqueue_dequeue(&kt_runq);
         curproc = curthr->kt_proc;
         context_switch(&OldThread->kt_ctx, &curthr->kt_ctx);
         intr_setipl(oldIPL);
+        dbg(DBG_PRINT, "(GRADING1C)\n");
 
         // dbg();
 }
@@ -240,7 +253,8 @@ void sched_switch(void)
 void sched_make_runnable(kthread_t *thr)
 {
         // NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");
-
+         KASSERT(&kt_runq != thr->kt_wchan);
+        dbg(DBG_PRINT, "(GRADING1A 5.a)\n");
         uint8_t oldIPL; // protect access to RunQueue by
                         // masking all interrupts
         oldIPL = intr_getipl();
@@ -248,6 +262,7 @@ void sched_make_runnable(kthread_t *thr)
         thr->kt_state = KT_RUN;         // set thr's state to KT_RUN
         ktqueue_enqueue(&kt_runq, thr); // enqueue thr onto RunQueue
         intr_setipl(oldIPL);            // restore IPL to original value
+        dbg(DBG_PRINT, "(GRADING1C)\n");
 
         return;
 }
