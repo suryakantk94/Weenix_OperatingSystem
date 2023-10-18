@@ -136,7 +136,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 
         // Setup the thread's execution context
         context_setup(&newKThread->kt_ctx, func, arg1, arg2, newKThread->kt_kstack, DEFAULT_STACK_SIZE, p->p_pagedir);
-        
+        dbg(DBG_PRINT , "(GRADING1A)\n" );
         return newKThread;
 }
 
@@ -160,11 +160,14 @@ kthread_cancel(kthread_t *kthr, void *retval)
         // NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");
         KASSERT(NULL != kthr);
         dbg(DBG_PRINT, "(GRADING1A 3.b)\n");
-        dbg(DBG_PRINT, "(GRADING1C)\n");
+        
 
         // If the thread to be canceled is the current thread, exit it
+        dbg(DBG_PRINT, "(GRADING1C)\n");
         if (kthr == curthr) {
+                dbg(DBG_PRINT, "(GRADING1C)\n");
                 kthread_exit(retval);
+                panic("weenix returned after kthread_exit()!!! BAD!!!\n");
         }
 
         // Set the return value and cancellation flag
@@ -175,8 +178,10 @@ kthread_cancel(kthread_t *kthr, void *retval)
         if (kthr->kt_state == KT_SLEEP || 
                 kthr->kt_state == KT_SLEEP_CANCELLABLE || 
                 kthr->kt_state == KT_RUN) {
-                sched_cancel(kthr);
+                        dbg(DBG_PRINT, "(GRADING1C)\n");
+                        sched_cancel(kthr);
         }
+        dbg(DBG_PRINT, "(GRADING1C)\n");
 }
 
 /*
@@ -198,15 +203,16 @@ void
 kthread_exit(void *retval)
 {
         // NOT_YET_IMPLEMENTED("PROCS: kthread_exit");
-        curthr->kt_retval = retval;
-        curthr->kt_state = KT_EXITED;
-
         KASSERT(!curthr->kt_wchan);
         KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);
         KASSERT(curthr->kt_proc == curproc);
         dbg(DBG_PRINT, "(GRADING1A 3.c)\n");
 
+        curthr->kt_retval = retval;
+        curthr->kt_state = KT_EXITED;
+
         proc_thread_exited(retval);
+        dbg(DBG_PRINT , "(GRADING1A)\n" );
         // sched_switch();
 }
 
