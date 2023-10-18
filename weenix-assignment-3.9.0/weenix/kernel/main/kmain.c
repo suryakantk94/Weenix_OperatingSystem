@@ -101,8 +101,18 @@ bootstrap(int arg1, void *arg2)
 
 //        NOT_YET_IMPLEMENTED("PROCS: bootstrap");
         curproc = proc_create("idleproc");
+
+        KASSERT(NULL != curproc);
+        KASSERT(PID_IDLE == curproc->p_pid);
+        dbg(DBG_PRINT, "(GRADING1A 1.a)\n");
+
         curthr = kthread_create(curproc,(kthread_func_t) idleproc_run, 0, NULL);
+
+        KASSERT(NULL != curthr);
+        dbg(DBG_PRINT, "(GRADING1A 1.a)\n");
+
         curthr->kt_state = KT_RUN;
+
         context_make_active(&(curthr->kt_ctx));
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
        return NULL;
@@ -171,10 +181,19 @@ kthread_t *
 initproc_create(void)
 {
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_create");
+
         proc_t *initproc = proc_create("initproc");
+
+        KASSERT(NULL != p);
+        KASSERT(PID_INIT == p->p_pid);
+        dbg(DBG_PRINT, "(GRADING1A 1.b)\n"
+
         kthread_t *t = kthread_create(initproc, (kthread_func_t) initproc_run, NULL, NULL);
-        // sched_make_runnable(t);
-        return t;
+
+        KASSERT(NULL != thr);
+        dbg(DBG_PRINT, "(GRADING1A 1.b)\n"
+
+    return t;
 }
 
 #ifdef __DRIVERS__
