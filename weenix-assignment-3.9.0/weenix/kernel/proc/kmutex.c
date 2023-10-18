@@ -54,17 +54,17 @@ kmutex_lock(kmutex_t *mtx)
         //precondition KASSERT
         KASSERT(curthr && (curthr != mtx->km_holder));
         dbg(DBG_PRINT, "(GRADING1A 6.a)\n");
-        dbg(DBG_PRINT, "(GRADING1C)\n")
+        dbg(DBG_PRINT, "(GRADING1C)\n");
         if(mtx->km_holder == NULL){
                 //gives mutex to curthr since it is available
                 mtx->km_holder = curthr;
-                dbg(DBG_PRINT, "(GRADING1C)\n")
+                dbg(DBG_PRINT, "(GRADING1C)\n");
         }
         else {
-                dbg(DBG_PRINT, "(GRADING1C)\n")
+                dbg(DBG_PRINT, "(GRADING1C)\n");
                 sched_sleep_on(&mtx->km_waitq);  
         }
-        dbg(DBG_PRINT, "(GRADING1C)\n")
+        dbg(DBG_PRINT, "(GRADING1C)\n");
 }
 
 /*
@@ -78,17 +78,17 @@ kmutex_lock_cancellable(kmutex_t *mtx)
         //precondition KASSERT
         KASSERT(curthr && (curthr != mtx->km_holder));
         dbg(DBG_PRINT, "(GRADING1A 6.b)\n");
-        dbg(DBG_PRINT, "(GRADING1C)\n")
+        dbg(DBG_PRINT, "(GRADING1C)\n");
         if(mtx->km_holder == NULL){
                 //gives mutex to curthr since it is available
                 mtx->km_holder = curthr;
-                dbg(DBG_PRINT, "(GRADING1C)\n")
+                dbg(DBG_PRINT, "(GRADING1C)\n");
         }
         else if(mtx->km_holder != curthr){
-                dbg(DBG_PRINT, "(GRADING1C)\n")
+                dbg(DBG_PRINT, "(GRADING1C)\n");
               return sched_cancellable_sleep_on(&mtx->km_waitq);  
         }
-        dbg(DBG_PRINT, "(GRADING1C)\n")
+        dbg(DBG_PRINT, "(GRADING1C)\n");
         return 0;
 }
 
@@ -125,5 +125,5 @@ kmutex_unlock(kmutex_t *mtx)
         //postcondition KASSERT - curthr should no longer have the mutex
         KASSERT(curthr != mtx->km_holder);
         dbg(DBG_PRINT , "(GRADING1A 6.c)\n" );
-	dbg(DBG_PRINT, "(GRADING1C)\n")
+	dbg(DBG_PRINT, "(GRADING1C)\n");
 }
