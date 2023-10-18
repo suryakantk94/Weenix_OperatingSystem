@@ -267,7 +267,8 @@ proc_create(char *name)
 
         if (curproc != NULL)
         {
-                list_insert_tail(&(curproc->p_children), &(p->p_child_link));
+            dbg(DBG_PRINT, "(GRADING1A)\n");
+            list_insert_tail(&(curproc->p_children), &(p->p_child_link));
         }
         p->p_pproc = curproc;
 
@@ -277,12 +278,14 @@ proc_create(char *name)
 
         if (pid == PID_INIT)
         {
-                proc_initproc = p;
+            dbg(DBG_PRINT, "(GRADING1A)\n");
+            proc_initproc = p;
         }
 
         sched_queue_init(&p->p_wait);
         p->p_pagedir = pt_create_pagedir();
 
+        KASSERT(p->p_pagedir != NULL);
         list_insert_tail(proc_list(), &p->p_list_link);
         p->p_state = PROC_RUNNING;
         return p;
@@ -326,6 +329,7 @@ void proc_cleanup(int status)
                 proc_t *p;
                 list_iterate_begin(&curproc->p_children, p, proc_t, p_child_link)
                 {
+                        dbg(DBG_PRINT, "(GRADING1C 5)\n");
                         list_remove(&p->p_child_link);
                         list_insert_tail(&(proc_initproc->p_children), &(p->p_child_link));
                         p->p_pproc = proc_initproc;
@@ -337,6 +341,7 @@ void proc_cleanup(int status)
         curproc->p_state = PROC_DEAD;
         if (!sched_queue_empty(&(parent->p_wait)))
         {
+                dbg(DBG_PRINT, "(GRADING1A)\n");
                 //            Parent proc is waiting. Have to wake it up
                 sched_wakeup_on(&(parent->p_wait));
         }
@@ -355,23 +360,26 @@ void proc_cleanup(int status)
  */
 void proc_kill(proc_t *p, int status)
 {
-        //    NOT_YET_IMPLEMENTED("PROCS: proc_kill");
+        dbg(DBG_PRINT, "(GRADING1C 9)\n");
         if (p == curproc)
         {
-                do_exit(status);
+            dbg(DBG_PRINT, "(GRADING1C 9)\n");
+            do_exit(status);
         }
         else
         {
+                dbg(DBG_PRINT, "(GRADING1C 9)\n");
                 kthread_t *k;
                 list_iterate_begin(&(p->p_threads), k, kthread_t, kt_plink)
                 {
-                        //                TODO check if kt_cancelled has to be set to 1 or if kthread_cancel has to be called
+                        dbg(DBG_PRINT, "(GRADING1C 9)\n");
                         k->kt_cancelled = 1;
                         kthread_cancel(k, (void *)status);
                 }
                 list_iterate_end();
                         // p->p_status = status;
         }
+        dbg(DBG_PRINT, "(GRADING1C 9)\n");
 }
 
 /*
@@ -386,8 +394,11 @@ void proc_kill_all()
         proc_t *p;
         list_iterate_begin(&(_proc_list), p, proc_t, p_list_link)
         {
-                if(p->p_pid != PID_IDLE && p->p_pproc->p_pid != PID_IDLE)
-                        proc_kill(p, 0);
+                dbg(DBG_PRINT, "(GRADING1C 9)\n");
+                if(p->p_pid != PID_IDLE && p->p_pproc->p_pid != PID_IDLE) {
+                    dbg(DBG_PRINT, "(GRADING1C 9)\n");
+                    proc_kill(p, 0);
+                }
         }
         list_iterate_end();
 }
@@ -402,7 +413,7 @@ void proc_kill_all()
  */
 void proc_thread_exited(void *retval)
 {
-        //        NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");
+        dbg(DBG_PRINT, "(GRADING1C 1)\n");
         proc_cleanup((int)retval);
         sched_switch();
 }
@@ -424,31 +435,40 @@ void proc_thread_exited(void *retval)
  */
 pid_t do_waitpid(pid_t pid, int options, int *status)
 {
-        //        NOT_YET_IMPLEMENTED("PROCS: do_waitpid");
+        dbg(DBG_PRINT, "(GRADING1C 1)\n");
         pid_t dead_pid = -1;
         if (list_empty(&(curproc->p_children)))
         {
+                dbg(DBG_PRINT, "(GRADING1C)\n");
                 return -ECHILD;
         }
         if (pid == -1)
         {
+                dbg(DBG_PRINT, "(GRADING1A)\n");
                 do
                 {
+                        dbg(DBG_PRINT, "(GRADING1A)\n");
                         proc_t *p;
                         list_iterate_begin(&(curproc->p_children), p, proc_t, p_child_link)
                         {
+                                dbg(DBG_PRINT, "(GRADING1A)\n");
                                 if (p->p_state == PROC_DEAD)
-                                {
+                                    {
+                                        dbg(DBG_PRINT, "(GRADING1A)\n");
                                         dead_pid = p->p_pid;
                                         if (status != NULL)
                                         {
                                                 *status = p->p_status;
+                                                dbg(DBG_PRINT, "(GRADING1A)\n");
                                         }
                                         kthread_t *t;
                                         list_iterate_begin(&(p->p_threads), t, kthread_t, kt_plink)
                                         {
-                                                if(t->kt_state != KT_EXITED)
-                                                        kthread_destroy(t);
+                                                dbg(DBG_PRINT, "(GRADING1C 8)\n");
+                                                if(t->kt_state != KT_EXITED) {
+                                                    dbg(DBG_PRINT, "(GRADING1C 8)\n");
+                                                    kthread_destroy(t);
+                                                }
                                         }
                                         list_iterate_end();
 
@@ -475,20 +495,25 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
         }
         else if (pid > 0)
         {
+                dbg(DBG_PRINT, "(GRADING1C 3)\n");
                 proc_t *p;
                 list_iterate_begin(&(curproc->p_children), p, proc_t, p_child_link)
                 {
+                        dbg(DBG_PRINT, "(GRADING1C 3)\n");
                         if (p->p_pid == pid)
                         {
+                                dbg(DBG_PRINT, "(GRADING1C 3)\n");
                                 while (p->p_state != PROC_DEAD)
                                 {
                                         //                        Wait for the process to exit
+                                        dbg(DBG_PRINT, "(GRADING1C 3)\n");
                                         sched_sleep_on(&(curproc->p_wait));
                                 }
                                 //                    Process is now dead
                                 dead_pid = p->p_pid;
                                 if (status != NULL)
                                 {
+                                        dbg(DBG_PRINT, "(GRADING1C 3)\n");
                                         *status = p->p_status;
                                 }
                                 kthread_t *t;
@@ -508,17 +533,16 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
                                 dbg(DBG_PRINT, "(GRADING1A 2.c)\n");
 
                                 pt_destroy_pagedir(p->p_pagedir);
-                                dbg(DBG_PRINT, "(GRADING1C)\n");
+                                dbg(DBG_PRINT, "(GRADING1C 3)\n");
 
                                 slab_obj_free(proc_allocator, p);
-                                dbg(DBG_PRINT, "(GRADING1C)\n");
+                                dbg(DBG_PRINT, "(GRADING1C 3)\n");
                                 return dead_pid;
                         }
                 }
                 list_iterate_end();
-                dbg(DBG_PRINT, "(GRADING1A)\n");
         }
-        return -ECHILD;
+    return -ECHILD;
 }
 
 /*
@@ -530,12 +554,14 @@ pid_t do_waitpid(pid_t pid, int options, int *status)
 void do_exit(int status)
 {
         kthread_t *k;
+        dbg(DBG_PRINT, "(GRADING1C 1)\n");
         list_iterate_begin(&(curproc->p_threads), k, kthread_t, kt_plink)
         {
-                //            TODO check if cancelled has to be set here or if kthread_cancel has to be called here
+                dbg(DBG_PRINT, "(GRADING1C 1)\n");
                 k->kt_cancelled = 1;
-                           kthread_cancel(k, (void*) status);
+                kthread_cancel(k, (void*) status);
         }
         list_iterate_end();
+        dbg(DBG_PRINT, "(GRADING1C 1)\n");
         kthread_exit((void *)status);
 }
