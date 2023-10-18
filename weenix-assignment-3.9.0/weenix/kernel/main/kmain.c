@@ -190,7 +190,7 @@ initproc_create(void)
 
         kthread_t *t = kthread_create(initproc, (kthread_func_t) initproc_run, NULL, NULL);
 
-        KASSERT(NULL != thr);
+        KASSERT(NULL != t);
         dbg(DBG_PRINT, "(GRADING1A 1.b)\n");
 
     return t;
