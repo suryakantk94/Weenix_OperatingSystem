@@ -184,14 +184,14 @@ initproc_create(void)
 
         proc_t *initproc = proc_create("initproc");
 
-        KASSERT(NULL != p);
-        KASSERT(PID_INIT == p->p_pid);
-        dbg(DBG_PRINT, "(GRADING1A 1.b)\n"
+        KASSERT(NULL != initproc);
+        KASSERT(PID_INIT == initproc->p_pid);
+        dbg(DBG_PRINT, "(GRADING1A 1.b)\n");
 
         kthread_t *t = kthread_create(initproc, (kthread_func_t) initproc_run, NULL, NULL);
 
         KASSERT(NULL != thr);
-        dbg(DBG_PRINT, "(GRADING1A 1.b)\n"
+        dbg(DBG_PRINT, "(GRADING1A 1.b)\n");
 
     return t;
 }
