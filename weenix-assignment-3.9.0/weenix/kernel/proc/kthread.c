@@ -202,14 +202,14 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval)
 {
-        // NOT_YET_IMPLEMENTED("PROCS: kthread_exit");
+
+        curthr->kt_retval = retval;
+        curthr->kt_state = KT_EXITED;
+
         KASSERT(!curthr->kt_wchan);
         KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);
         KASSERT(curthr->kt_proc == curproc);
         dbg(DBG_PRINT, "(GRADING1A 3.c)\n");
-
-        curthr->kt_retval = retval;
-        curthr->kt_state = KT_EXITED;
 
         proc_thread_exited(retval);
         dbg(DBG_PRINT , "(GRADING1A)\n" );
