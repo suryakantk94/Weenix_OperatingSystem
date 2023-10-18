@@ -106,7 +106,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
         // NOT_YET_IMPLEMENTED("PROCS: kthread_create");
         // Memory allocation for the new kthread
         KASSERT(NULL != p);
-        dbg(DBG_PRINT, "(GRADING1A 3.a)\n");
+        dbg(DBG_PRINT, "(GRADING1A)\n");
 
         kthread_t *newKThread = (kthread_t*)slab_obj_alloc(kthread_allocator);
 
@@ -159,7 +159,7 @@ kthread_cancel(kthread_t *kthr, void *retval)
 {
         // NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");
         KASSERT(NULL != kthr);
-        dbg(DBG_PRINT, "(GRADING1A 3.b)\n");
+        dbg(DBG_PRINT, "(GRADING1A)\n");
         
 
         // If the thread to be canceled is the current thread, exit it
@@ -209,7 +209,7 @@ kthread_exit(void *retval)
         KASSERT(!curthr->kt_wchan);
         KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);
         KASSERT(curthr->kt_proc == curproc);
-        dbg(DBG_PRINT, "(GRADING1A 3.c)\n");
+        dbg(DBG_PRINT, "(GRADING1A)\n");
 
         proc_thread_exited(retval);
         dbg(DBG_PRINT , "(GRADING1A)\n" );
