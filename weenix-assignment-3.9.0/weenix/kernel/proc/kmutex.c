@@ -33,7 +33,12 @@
 void
 kmutex_init(kmutex_t *mtx)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kmutex_init");
+        //NOT_YET_IMPLEMENTED("PROCS: kmutex_init");
+        mtx->km_holder = NULL;
+        list_init(&(mtx->km_waitq.tq_list));
+        mtx->km_waitq.tq_size = 0;
+
+        dbg(DBG_PRINT , "(GRADING1C 7)\n" );
 }
 
 /*
@@ -45,7 +50,21 @@ kmutex_init(kmutex_t *mtx)
 void
 kmutex_lock(kmutex_t *mtx)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kmutex_lock");
+        //NOT_YET_IMPLEMENTED("PROCS: kmutex_lock");
+        //precondition KASSERT
+        KASSERT(curthr && (curthr != mtx->km_holder));
+        dbg(DBG_PRINT, "(GRADING1A 6.a)\n");
+        dbg(DBG_PRINT, "(GRADING1C)\n");
+        if(mtx->km_holder == NULL){
+                //gives mutex to curthr since it is available
+                mtx->km_holder = curthr;
+                dbg(DBG_PRINT, "(GRADING1C)\n");
+        }
+        else {
+                dbg(DBG_PRINT, "(GRADING1C)\n");
+                sched_sleep_on(&mtx->km_waitq);  
+        }
+        dbg(DBG_PRINT, "(GRADING1C)\n");
 }
 
 /*
@@ -55,7 +74,21 @@ kmutex_lock(kmutex_t *mtx)
 int
 kmutex_lock_cancellable(kmutex_t *mtx)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kmutex_lock_cancellable");
+        //NOT_YET_IMPLEMENTED("PROCS: kmutex_lock_cancellable");
+        //precondition KASSERT
+        KASSERT(curthr && (curthr != mtx->km_holder));
+        dbg(DBG_PRINT, "(GRADING1A 6.b)\n");
+        dbg(DBG_PRINT, "(GRADING1C)\n");
+        if(mtx->km_holder == NULL){
+                //gives mutex to curthr since it is available
+                mtx->km_holder = curthr;
+                dbg(DBG_PRINT, "(GRADING1C)\n");
+        }
+        else if(mtx->km_holder != curthr){
+                dbg(DBG_PRINT, "(GRADING1C)\n");
+              return sched_cancellable_sleep_on(&mtx->km_waitq);  
+        }
+        dbg(DBG_PRINT, "(GRADING1C)\n");
         return 0;
 }
 
@@ -75,5 +108,22 @@ kmutex_lock_cancellable(kmutex_t *mtx)
 void
 kmutex_unlock(kmutex_t *mtx)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kmutex_unlock");
+        //NOT_YET_IMPLEMENTED("PROCS: kmutex_unlock");
+        // precondition KASSERT - curthr must be holding the mutex to free it
+        KASSERT(curthr && (curthr == mtx->km_holder));
+        dbg(DBG_PRINT , "(GRADING1A 6.c)\n" );
+        if(sched_queue_empty(&mtx->km_waitq)){
+                //mutex freed since noone waiting for it                
+                mtx->km_holder = NULL; 
+                dbg(DBG_PRINT , "(GRADING1C)\n" );
+        }
+        else{
+                //wakes up a thread from the mutex queue and gives it the mutex and adds it to the run queue
+                mtx->km_holder = sched_wakeup_on(&mtx->km_waitq); 
+                dbg(DBG_PRINT , "(GRADING1C)\n" );
+        }
+        //postcondition KASSERT - curthr should no longer have the mutex
+        KASSERT(curthr != mtx->km_holder);
+        dbg(DBG_PRINT , "(GRADING1A 6.c)\n" );
+	dbg(DBG_PRINT, "(GRADING1C)\n");
 }

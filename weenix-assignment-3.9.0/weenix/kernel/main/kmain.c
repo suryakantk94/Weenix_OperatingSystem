@@ -72,6 +72,12 @@ kthread_t *initproc_create(void);
 void      *initproc_run(int arg1, void *arg2);
 void      *final_shutdown(void);
 
+extern void *faber_thread_test(int, void*);
+extern void *sunghan_test(int, void*);
+extern void *sunghan_deadlock_test(int, void*);
+extern int faber_fs_thread_test(kshell_t *ksh, int argc, char **argv);
+extern int faber_directory_test(kshell_t *ksh, int argc, char **argv);
+extern void *vfstest_main(int, void*);
 /**
  * This function is called from kmain, however it is not running in a
  * thread context yet. It should create the idle process which will
@@ -95,10 +101,21 @@ bootstrap(int arg1, void *arg2)
 
 //        NOT_YET_IMPLEMENTED("PROCS: bootstrap");
         curproc = proc_create("idleproc");
-        curthr = kthread_create(curproc,(kthread_func_t) idleproc_run, arg1, arg2);
+
+        KASSERT(NULL != curproc);
+        KASSERT(PID_IDLE == curproc->p_pid);
+        dbg(DBG_PRINT, "(GRADING1A 1.a)\n");
+
+        curthr = kthread_create(curproc,(kthread_func_t) idleproc_run, 0, NULL);
+
+        KASSERT(NULL != curthr);
+        dbg(DBG_PRINT, "(GRADING1A 1.a)\n");
+
+        curthr->kt_state = KT_RUN;
+
         context_make_active(&(curthr->kt_ctx));
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
-//        return NULL;
+       return NULL;
 }
 
 /**
@@ -164,10 +181,55 @@ kthread_t *
 initproc_create(void)
 {
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_create");
+
         proc_t *initproc = proc_create("initproc");
+
+        KASSERT(NULL != initproc);
+        KASSERT(PID_INIT == initproc->p_pid);
+        dbg(DBG_PRINT, "(GRADING1A 1.b)\n");
+
         kthread_t *t = kthread_create(initproc, (kthread_func_t) initproc_run, NULL, NULL);
-        return t;
+
+        KASSERT(NULL != t);
+        dbg(DBG_PRINT, "(GRADING1A 1.b)\n");
+
+    return t;
 }
+
+#ifdef __DRIVERS__
+int do_faber_test(kshell_t *kshell, int argc, char **argv){
+    KASSERT(NULL != kshell);
+    proc_t *p = proc_create("faber_test");
+    kthread_t *t = kthread_create(p, faber_thread_test, 0, NULL);
+    int status;
+
+    sched_make_runnable(t);
+    int child = do_waitpid(p->p_pid, 0, &status);
+    return 0;
+}
+
+int do_sunghan_test(kshell_t *kshell, int argc, char **argv){
+    KASSERT(NULL != kshell);
+    proc_t *p = proc_create("sunghan_test");
+    kthread_t *t = kthread_create(p, sunghan_test, 0, NULL);
+    int status;
+
+    sched_make_runnable(t);
+    int child = do_waitpid(p->p_pid, 0, &status);
+    return 0;
+}
+
+int do_sunghan_deadlock_test(kshell_t *kshell, int argc, char **argv){
+    KASSERT(NULL != kshell);
+    proc_t *p = proc_create("sunghan_deadlock_test");
+    kthread_t *t = kthread_create(p, sunghan_deadlock_test, 0, NULL);
+    int status;
+
+    sched_make_runnable(t);
+    int child = do_waitpid(p->p_pid, 0, &status);
+    return 0;
+}
+#endif /* __DRIVERS__ */
 
 
 /**
@@ -185,6 +247,19 @@ void *
 initproc_run(int arg1, void *arg2)
 {
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
+        // dbg(DBG_PRINT,"INITPROC RAN!");
+        // return NULL;
+    #ifdef __DRIVERS__
 
-        return NULL;
+        kshell_add_command("faber-test", do_faber_test, "invoke do_faber_test()...");
+        kshell_add_command("sunghan-test", do_sunghan_test, "invoke do_shungan_test()...");
+        kshell_add_command("sunghan-deadlock-test", do_sunghan_deadlock_test, "invoke do_shungan_deadlock_test()...");
+
+        kshell_t *kshell = kshell_create(0);
+        if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
+        while (kshell_execute_next(kshell));
+        kshell_destroy(kshell);
+
+    #endif /* __DRIVERS__ */
+    return NULL;
 }
