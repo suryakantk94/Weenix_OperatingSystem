@@ -146,11 +146,21 @@ idleproc_run(int arg1, void *arg2)
 #ifdef __VFS__
         /* Once you have VFS remember to set the current working directory
          * of the idle and init processes */
+        initthr->kt_proc->p_cwd = vfs_root_vn;
+        vref(initthr->kt_proc->p_cwd);
+
+        curproc->p_cwd = vfs_root_vn;
+        vref(curproc->p_cwd);
+        
         NOT_YET_IMPLEMENTED("VFS: idleproc_run");
 
         /* Here you need to make the null, zero, and tty devices using mknod */
         /* You can't do this until you have VFS, check the include/drivers/dev.h
          * file for macros with the device ID's you will need to pass to mknod */
+        do_mkdir("/dev");
+        do_mknod("/dev/null", S_IFCHR, MKDEVID(1, 0));
+        do_mknod("/dev/zero", S_IFCHR, MKDEVID(1, 1));
+        do_mknod("/dev/tty0", S_IFCHR, MKDEVID(2, 0));
         NOT_YET_IMPLEMENTED("VFS: idleproc_run");
 #endif
 

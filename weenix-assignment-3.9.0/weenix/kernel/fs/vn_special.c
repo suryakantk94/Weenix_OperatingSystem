@@ -113,8 +113,19 @@ special_file_stat(vnode_t *vnode, struct stat *ss)
 int
 special_file_read(vnode_t *file, off_t offset, void *buf, size_t count)
 {
-        NOT_YET_IMPLEMENTED("VFS: special_file_read");
-        return 0;
+        // NOT_YET_IMPLEMENTED("VFS: special_file_read");
+        KASSERT(file);
+        dbg(DBG_PRINT, "(GRADING2A 1.a)\n"); //
+        KASSERT(S_ISCHR(file->vn_mode) || S_ISBLK(file->vn_mode));
+        dbg(DBG_PRINT, "(GRADING2A 1.a)\n");
+
+        KASSERT(!S_ISBLK(file->vn_mode));
+        
+        KASSERT(file->vn_cdev && file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->read);
+        dbg(DBG_PRINT, "(GRADING2A 1.a)\n"); //
+        int readBytes = file->vn_cdev->cd_ops->read(file->vn_cdev, offset, buf, count);
+        dbg(DBG_PRINT, "(GRADING2A)\n"); //
+        return readBytes;
 }
 
 /*
@@ -126,8 +137,19 @@ special_file_read(vnode_t *file, off_t offset, void *buf, size_t count)
 int
 special_file_write(vnode_t *file, off_t offset, const void *buf, size_t count)
 {
-        NOT_YET_IMPLEMENTED("VFS: special_file_write");
-        return 0;
+        // NOT_YET_IMPLEMENTED("VFS: special_file_write");
+        KASSERT(file);
+        dbg(DBG_PRINT, "(GRADING2A 1.b)\n"); //
+        KASSERT(S_ISCHR(file->vn_mode) || S_ISBLK(file->vn_mode));
+        dbg(DBG_PRINT, "(GRADING2A 1.b)\n"); //
+
+        KASSERT(!S_ISBLK(file->vn_mode));
+
+        KASSERT(file->vn_cdev && file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->write);
+        dbg(DBG_PRINT, "(GRADING2A 1.b)\n"); //
+        int writeBytes = file->vn_cdev->cd_ops->write(file->vn_cdev, offset, buf, count);
+        dbg(DBG_PRINT, "(GRADING2A)\n"); //
+        return writeBytes;
 }
 
 /* Memory map the special file represented by <file>. All of the
