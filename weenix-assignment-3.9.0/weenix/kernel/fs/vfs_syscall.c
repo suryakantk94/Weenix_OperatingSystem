@@ -163,11 +163,8 @@ int do_close(int fd)
  *        The process already has the maximum number of file descriptors open
  *        and tried to open a new one.
  */
-<<<<<<< Updated upstream
-== == == =
 
->>>>>>> Stashed changes
-             int do_dup(int fd)
+int do_dup(int fd)
 {
         // NOT_YET_IMPLEMENTED("VFS: do_dup");
 
@@ -330,7 +327,7 @@ int do_mknod(const char *path, int mode, unsigned devid)
  * Error cases you must handle for this function at the VFS level:
  *      o EEXIST
  *        path already exists.
- *      o  mn,.jk/hl
+ *      o ENOENT
  *        A directory component in path does not exist.
  *      o ENOTDIR
  *        A component used as a directory in path is not, in fact, a directory.
