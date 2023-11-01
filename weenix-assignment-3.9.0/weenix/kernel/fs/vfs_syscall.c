@@ -62,11 +62,33 @@
  * In all cases, be sure you do not leak file refcounts by returning before
  * you fput() a file that you fget()'ed.
  */
-int
-do_read(int fd, void *buf, size_t nbytes)
+int do_read(int fd, void *buf, size_t nbytes)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_read");
-        return -1;
+        if (fd < 0 || fd >= NFILES)
+        {
+                return -EBADF;
+        }
+
+        file_t *file = fget(fd);
+
+        if (file == NULL)
+        {
+                return -EBADF;
+        }
+        if (file->f_mode != FMODE_READ)
+        {
+                fput(file);
+                return -EBADF;
+        }
+        if (S_ISDIR(file->f_vnode->vn_mode))
+        {
+                fput(file);
+                return -EISDIR;
+        }
+        int bytes_read = file->f_vnode->vn_ops->read(file->f_vnode, file->f_pos, buf, nbytes);
+        file->f_pos = file->f_pos + bytes_read;
+        fput(file);
+        return bytes_read;
 }
 
 /* Very similar to do_read.  Check f_mode to be sure the file is writable.  If
@@ -77,11 +99,30 @@ do_read(int fd, void *buf, size_t nbytes)
  *      o EBADF
  *        fd is not a valid file descriptor or is not open for writing.
  */
-int
-do_write(int fd, const void *buf, size_t nbytes)
+int do_write(int fd, const void *buf, size_t nbytes)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_write");
-        return -1;
+        if (fd < 0 || fd >= NFILES)
+        {
+                return -EBADF;
+        }
+        file_t *file = fget(fd);
+        if (file == NULL)
+        {
+                return -EBADF;
+        }
+        if (file->f_mode != FMODE_WRITE)
+        {
+                fput(file);
+                return -EBADF;
+        }
+        if (file->f_mode & FMODE_APPEND)
+        {
+                do_lseek(fd, 0, SEEK_END);
+        }
+        int bytes_written = file->f_vnode->vn_ops->write(file->f_vnode, file->f_pos, buf, nbytes);
+        file->f_pos = file->f_pos + bytes_written;
+        fput(file);
+        return bytes_written;
 }
 
 /*
@@ -91,11 +132,19 @@ do_write(int fd, const void *buf, size_t nbytes)
  *      o EBADF
  *        fd isn't a valid open file descriptor.
  */
-int
-do_close(int fd)
+int do_close(int fd)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_close");
-        return -1;
+        if (fd < 0 || fd >= NFILES)
+        {
+                return -EBADF;
+        }
+        if (curproc->p_files[fd] == NULL)
+        {
+                return -EBADF;
+        }
+        fput(curproc->p_files[fd]);
+        curproc->p_files[fd] = NULL;
+        return 0;
 }
 
 /* To dup a file:
@@ -114,8 +163,7 @@ do_close(int fd)
  *        The process already has the maximum number of file descriptors open
  *        and tried to open a new one.
  */
-int
-do_dup(int fd)
+int do_dup(int fd)
 {
         NOT_YET_IMPLEMENTED("VFS: do_dup");
         return -1;
@@ -130,8 +178,7 @@ do_dup(int fd)
  *        ofd isn't an open file descriptor, or nfd is out of the allowed
  *        range for file descriptors.
  */
-int
-do_dup2(int ofd, int nfd)
+int do_dup2(int ofd, int nfd)
 {
         NOT_YET_IMPLEMENTED("VFS: do_dup2");
         return -1;
@@ -162,8 +209,7 @@ do_dup2(int ofd, int nfd)
  *      o ENAMETOOLONG
  *        A component of path was too long.
  */
-int
-do_mknod(const char *path, int mode, unsigned devid)
+int do_mknod(const char *path, int mode, unsigned devid)
 {
         NOT_YET_IMPLEMENTED("VFS: do_mknod");
         return -1;
@@ -176,18 +222,45 @@ do_mknod(const char *path, int mode, unsigned devid)
  * Error cases you must handle for this function at the VFS level:
  *      o EEXIST
  *        path already exists.
- *      o ENOENT
+ *      o  mn,.jk/hl
  *        A directory component in path does not exist.
  *      o ENOTDIR
  *        A component used as a directory in path is not, in fact, a directory.
  *      o ENAMETOOLONG
  *        A component of path was too long.
  */
-int
-do_mkdir(const char *path)
+int do_mkdir(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_mkdir");
-        return -1;
+
+        vnode_t *parent = NULL, *exists = NULL;
+        const char *parent_name;
+        size_t *parent_len;
+        int err = dir_namev(path, &parent_len, &parent_name, NULL, &parent);
+
+        if (err != 0)
+        {
+                return err;
+        }
+        if (!S_ISDIR(parent->vn_mode) || (parent->vn_ops->mkdir == NULL))
+        {
+                vput(parent);
+                return -ENOTDIR;
+        }
+        if (parent_len > STR_MAX)
+        {
+                vput(parent);
+                return -ENAMETOOLONG;
+        }
+        err = lookup(parent, parent_name, parent_len, &exists);
+        if (err != -ENOENT)
+        {
+                vput(parent);
+                vput(exists);
+                return -EEXIST;
+        }
+        int mkdir_res = parent->vn_ops->mkdir(parent, parent_name, parent_len);
+        vput(parent);
+        return mkdir_res;
 }
 
 /* Use dir_namev() to find the vnode of the directory containing the dir to be
@@ -208,11 +281,48 @@ do_mkdir(const char *path)
  *      o ENAMETOOLONG
  *        A component of path was too long.
  */
-int
-do_rmdir(const char *path)
+int do_rmdir(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_rmdir");
-        return -1;
+        size_t file_name_len;
+        int path_len = strlen(path);
+        const char *file_name;
+        vnode_t *parent = NULL, *exists = NULL;
+        int err = dir_namev(path, &file_name_len, &file_name, NULL, &parent);
+        if (err != 0)
+        {
+                return err;
+        }
+        if (file_name_len > STR_MAX)
+        {
+                vput(parent);
+                return -ENAMETOOLONG;
+        }
+        if (file_name_len == 1 && file_name[0] == '.')
+        {
+                vput(parent);
+                return -EINVAL;
+        }
+        if (file_name_len == 2 && file_name[0] == '.' && file_name[1] == '.')
+        {
+                vput(parent);
+                return -ENOTEMPTY;
+        }
+        if (!S_ISDIR(parent->vn_mode) || (parent->vn_ops->mkdir == NULL))
+        {
+                vput(parent);
+                return -ENOTDIR;
+        }
+
+        int exists_lookup = lookup(parent, file_name, file_name_len, &exists);
+        if (exists_lookup == 0)
+        {
+                int rmdir_res = parent->vn_ops->rmdir(parent, file_name, file_name_len);
+                vput(parent);
+                vput(exists);
+                return rmdir_res;
+        }
+        vput(parent);
+        return exists_lookup;
 }
 
 /*
@@ -229,8 +339,7 @@ do_rmdir(const char *path)
  *      o ENAMETOOLONG
  *        A component of path was too long.
  */
-int
-do_unlink(const char *path)
+int do_unlink(const char *path)
 {
         NOT_YET_IMPLEMENTED("VFS: do_unlink");
         return -1;
@@ -257,8 +366,7 @@ do_unlink(const char *path)
  *      o EPERM
  *        from is a directory.
  */
-int
-do_link(const char *from, const char *to)
+int do_link(const char *from, const char *to)
 {
         NOT_YET_IMPLEMENTED("VFS: do_link");
         return -1;
@@ -272,11 +380,10 @@ do_link(const char *from, const char *to)
  * Linux system call (if unlink fails then two links to the
  * file could exist).
  */
-int
-do_rename(const char *oldname, const char *newname)
+int do_rename(const char *oldname, const char *newname)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_rename");
-        return -1;
+        int res_linking = do_link(oldname, newname);
+        return res_linking;
 }
 
 /* Make the named directory the current process's cwd (current working
@@ -292,8 +399,7 @@ do_rename(const char *oldname, const char *newname)
  *      o ENOTDIR
  *        A component of path is not a directory.
  */
-int
-do_chdir(const char *path)
+int do_chdir(const char *path)
 {
         NOT_YET_IMPLEMENTED("VFS: do_chdir");
         return -1;
@@ -314,8 +420,7 @@ do_chdir(const char *path)
  *      o ENOTDIR
  *        File descriptor does not refer to a directory.
  */
-int
-do_getdent(int fd, struct dirent *dirp)
+int do_getdent(int fd, struct dirent *dirp)
 {
         NOT_YET_IMPLEMENTED("VFS: do_getdent");
         return -1;
@@ -331,11 +436,50 @@ do_getdent(int fd, struct dirent *dirp)
  *        whence is not one of SEEK_SET, SEEK_CUR, SEEK_END; or the resulting
  *        file offset would be negative.
  */
-int
-do_lseek(int fd, int offset, int whence)
+int do_lseek(int fd, int offset, int whence)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_lseek");
-        return -1;
+        if (fd < 0 || fd >= NFILES)
+        {
+                return -EBADF;
+        }
+        if (whence != SEEK_SET || whence != SEEK_CUR || whence != SEEK_END)
+        {
+                return -EINVAL;
+        }
+
+        file_t *file = fget(fd);
+        if (file == NULL)
+        {
+                return -EBADF;
+        }
+
+        int new_pos = file->f_pos;
+
+        if (whence == SEEK_SET)
+        {
+                new_pos = offset;
+        }
+        else if (whence == SEEK_CUR)
+        {
+                new_pos += offset;
+        }
+        else if (whence == SEEK_END)
+        {
+                new_pos = file->f_vnode->vn_len + offset;
+        }
+        else
+        {
+                fput(file);
+                return -EINVAL;
+        }
+        if (new_pos < 0)
+        {
+                fput(file);
+                return -EINVAL;
+        }
+        file->f_pos = new_pos;
+        fput(file);
+        return new_pos;
 }
 
 /*
@@ -351,11 +495,27 @@ do_lseek(int fd, int offset, int whence)
  *      o EINVAL
  *        path is an empty string.
  */
-int
-do_stat(const char *path, struct stat *buf)
+int do_stat(const char *path, struct stat *buf)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_stat");
-        return -1;
+        if (path[0] == '\0')
+        {
+                return -EINVAL;
+        }
+        vnode_t *vnode = NULL;
+        int err = open_namev(path, 0, &vnode, NULL);
+        if (err == 0)
+        {
+                if (vnode->vn_ops->stat == NULL)
+                {
+                        vput(vnode);
+                        return -ENOTDIR;
+                }
+                int stat_res = vnode->vn_ops->stat(vnode, buf);
+                vput(vnode);
+                return stat_res;
+        }
+
+        return err;
 }
 
 #ifdef __MOUNTING__
@@ -375,8 +535,7 @@ do_stat(const char *path, struct stat *buf)
  * error handling. Remember the fs_dev and fs_type buffers have limited size
  * so you should not write arbitrary length strings to them.
  */
-int
-do_mount(const char *source, const char *target, const char *type)
+int do_mount(const char *source, const char *target, const char *type)
 {
         NOT_YET_IMPLEMENTED("MOUNTING: do_mount");
         return -EINVAL;
@@ -391,8 +550,7 @@ do_mount(const char *source, const char *target, const char *type)
  * does is figure out which file system to pass to vfs_umount and do good error
  * checking.
  */
-int
-do_umount(const char *target)
+int do_umount(const char *target)
 {
         NOT_YET_IMPLEMENTED("MOUNTING: do_umount");
         return -EINVAL;
