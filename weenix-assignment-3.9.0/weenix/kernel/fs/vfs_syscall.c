@@ -163,10 +163,34 @@ int do_close(int fd)
  *        The process already has the maximum number of file descriptors open
  *        and tried to open a new one.
  */
-int do_dup(int fd)
+<<<<<<< Updated upstream
+== == == =
+
+>>>>>>> Stashed changes
+             int do_dup(int fd)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_dup");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VFS: do_dup");
+
+        file_t *file = fget(fd);
+        if (file == NULL)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return -EBADF;
+        }
+
+        int new_fd = get_empty_fd(curproc);
+        if (new_fd < 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                fput(file);
+                return -EMFILE;
+        }
+
+        curproc->p_files[new_fd] = file;
+        dbg(DBG_PRINT, "(GRADING2B)\n");
+        return new_fd;
+
+        // return -1;
 }
 
 /* Same as do_dup, but insted of using get_empty_fd() to get the new fd,
@@ -180,8 +204,37 @@ int do_dup(int fd)
  */
 int do_dup2(int ofd, int nfd)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_dup2");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VFS: do_dup2");
+
+        if (ofd < 0 || ofd >= NFILES || nfd < 0 || nfd >= NFILES)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return -EBADF;
+        }
+
+        if (ofd == nfd)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return nfd;
+        }
+
+        file_t *file = fget(ofd);
+        if (file == NULL)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return -EBADF;
+        }
+
+        if (curproc->p_files[nfd] != NULL)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                do_close(nfd);
+        }
+
+        curproc->p_files[nfd] = file;
+        dbg(DBG_PRINT, "(GRADING2B)\n");
+        return nfd;
+        // return -1;
 }
 
 /*
@@ -211,8 +264,63 @@ int do_dup2(int ofd, int nfd)
  */
 int do_mknod(const char *path, int mode, unsigned devid)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_mknod");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VFS: do_mknod");
+
+        if (mode != S_IFCHR && mode != S_IFBLK)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return -EINVAL;
+        }
+
+        size_t namelen = 0;
+        const char *name = NULL;
+        vnode_t *dir_vnode = NULL;
+        int ret = dir_namev(path, &namelen, &name, NULL, &dir_vnode); // dir_namev increments ref count of dir_vnode
+        if (ret < 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return ret;
+        }
+
+        // if (namelen > NAME_LEN)
+        // {
+        //         dbg(DBG_PRINT, "(GRADING2B)\n");
+        //         vput(dir_vnode);
+        //         return -ENAMETOOLONG;
+        // }
+
+        // if (!S_ISDIR(dir_vnode->vn_mode))
+        // {
+        //         dbg(DBG_PRINT, "(GRADING2B)\n");
+        //         vput(dir_vnode);
+        //         return -ENOTDIR;
+        // }
+
+        vnode_t *res_vnode = NULL;
+        ret = lookup(dir_vnode, name, namelen, &res_vnode);
+        if (ret == 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                vput(res_vnode);
+                return -EEXIST;
+        }
+
+        if (ret != -ENOENT)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                return ret;
+        }
+
+        // KASSERT(NULL != dir_vnode->vn_ops->mknod);
+        // dbg(DBG_PRINT, "(GRADING2A 3.f)\n");
+        ret = dir_vnode->vn_ops->mknod(dir_vnode, name, namelen, mode, devid);
+        vput(dir_vnode);
+        // dbg(DBG_PRINT, "(GRADING2B)\n");
+        return ret;
+
+        // return -1;
 }
 
 /* Use dir_namev() to find the vnode of the dir we want to make the new
@@ -341,8 +449,57 @@ int do_rmdir(const char *path)
  */
 int do_unlink(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_unlink");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VFS: do_unlink");
+
+        size_t namelen = 0;
+        const char *name = NULL;
+        vnode_t *dir_vnode = NULL;
+        int ret = dir_namev(path, &namelen, &name, NULL, &dir_vnode); // dir_namev increments ref count of dir_vnode
+        if (ret < 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return ret;
+        }
+
+        // if (namelen > NAME_LEN)
+        // {
+        //         dbg(DBG_PRINT, "(GRADING2B)\n");
+        //         vput(dir_vnode);
+        //         return -ENAMETOOLONG;
+        // }
+
+        // if (!S_ISDIR(dir_vnode->vn_mode))
+        // {
+        //         dbg(DBG_PRINT, "(GRADING2B)\n");
+        //         vput(dir_vnode);
+        //         return -ENOTDIR;
+        // }
+
+        vnode_t *res_vnode = NULL;
+        ret = lookup(dir_vnode, name, namelen, &res_vnode);
+        if (ret != 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                return ret;
+        }
+
+        if (S_ISDIR(res_vnode->vn_mode))
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                vput(res_vnode);
+                return -EPERM;
+        }
+
+        // KASSERT(NULL != dir_vnode->vn_ops->unlink);
+        // dbg(DBG_PRINT, "(GRADING2A 3.g)\n");
+        ret = dir_vnode->vn_ops->unlink(dir_vnode, name, namelen);
+        vput(dir_vnode);
+        vput(res_vnode);
+        // dbg(DBG_PRINT, "(GRADING2B)\n");
+        return ret;
+        // return -1;
 }
 
 /* To link:
@@ -368,8 +525,54 @@ int do_unlink(const char *path)
  */
 int do_link(const char *from, const char *to)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_link");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VFS: do_link");
+
+        size_t namelen = 0;
+        const char *name = NULL;
+        vnode_t *dir_vnode = NULL;
+        int ret = dir_namev(to, &namelen, &name, NULL, &dir_vnode); // dir_namev increments ref count of dir_vnode
+        if (ret < 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return ret;
+        }
+
+        vnode_t *res_vnode = NULL;
+        ret = lookup(dir_vnode, name, namelen, &res_vnode); // lookup increments ref count of res_vnode
+        if (ret == 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                vput(res_vnode);
+                return -EEXIST;
+        }
+
+        vnode_t *from_vnode = NULL;
+        ret = open_namev(from, 0, &from_vnode, NULL);
+        if (ret < 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                return ret;
+        }
+
+        if (S_ISDIR(from_vnode->vn_mode))
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                vput(from_vnode);
+                return -EPERM;
+        }
+
+        // KASSERT(NULL != dir_vnode->vn_ops->link);
+        // dbg(DBG_PRINT, "(GRADING2A 3.h)\n");
+        ret = dir_vnode->vn_ops->link(from_vnode, dir_vnode, name, namelen);
+        vput(dir_vnode);
+        vput(from_vnode);
+        // dbg(DBG_PRINT, "(GRADING2B)\n");
+        return ret;
+
+        // return -1;
 }
 
 /*      o link newname to oldname
@@ -401,8 +604,28 @@ int do_rename(const char *oldname, const char *newname)
  */
 int do_chdir(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_chdir");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VFS: do_chdir");
+        // return -1;
+
+        vnode_t *res_vnode = NULL;
+        int ret = open_namev(path, 0, &res_vnode, NULL);
+        if (ret < 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return ret;
+        }
+
+        if (!S_ISDIR(res_vnode->vn_mode))
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(res_vnode);
+                return -ENOTDIR;
+        }
+
+        vput(curproc->p_cwd);
+        curproc->p_cwd = res_vnode;
+        dbg(DBG_PRINT, "(GRADING2B)\n");
+        return 0;
 }
 
 /* Call the readdir vn_op on the given fd, filling in the given dirent_t*.
@@ -422,8 +645,47 @@ int do_chdir(const char *path)
  */
 int do_getdent(int fd, struct dirent *dirp)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_getdent");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VFS: do_getdent");
+
+        if (fd < 0 || fd >= NFILES)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return -EBADF;
+        }
+
+        file_t *file = fget(fd);
+        if (file == NULL)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return -EBADF;
+        }
+
+        if (!S_ISDIR(file->f_vnode->vn_mode))
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                fput(file);
+                return -ENOTDIR;
+        }
+
+        if (file->f_vnode->vn_ops->readdir == NULL)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                fput(file);
+                return -ENOTDIR;
+        }
+
+        int ret = file->f_vnode->vn_ops->readdir(file->f_vnode, file->f_pos, dirp);
+        if (ret > 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                file->f_pos += ret;
+        }
+
+        fput(file);
+        dbg(DBG_PRINT, "(GRADING2B)\n");
+        return ret;
+
+        // return -1;
 }
 
 /*
