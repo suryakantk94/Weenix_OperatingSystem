@@ -1,6 +1,17 @@
 {
   "files.associations": {
     "*.py": "python",
-    "proc.h": "c"
+    "proc.h": "c",
+    "vfs.h": "c",
+    "kernel.h": "c",
+    "globals.h": "c",
+    "file.h": "c",
+    "vnode.h": "c",
+    "open.h": "c",
+    "fcntl.h": "c",
+    "stat.h": "c",
+    "debug.h": "c",
+    "string.h": "c",
+    "ramfs.h": "c"
   }
 }
