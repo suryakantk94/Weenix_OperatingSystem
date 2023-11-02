@@ -104,8 +104,8 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         const char *start_ptr = pathname; 
         const char *slash_ptr = pathname;
         if(pathname[0] == '/'){
-                start_dir = vfs_root_vn;
-                start_ind++;
+                start_ptr = vfs_root_vn;
+                start_ptr++;
         }
 
         vref(start_dir);
