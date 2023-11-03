@@ -147,12 +147,14 @@ idleproc_run(int arg1, void *arg2)
         /* Once you have VFS remember to set the current working directory
          * of the idle and init processes */
         initthr->kt_proc->p_cwd = vfs_root_vn;
+        curproc->p_cwd = vfs_root_vn;
+        
+        vref(curproc->p_cwd);
         vref(initthr->kt_proc->p_cwd);
 
-        curproc->p_cwd = vfs_root_vn;
-        vref(curproc->p_cwd);
         
-        NOT_YET_IMPLEMENTED("VFS: idleproc_run");
+        
+        // NOT_YET_IMPLEMENTED("VFS: idleproc_run");
 
         /* Here you need to make the null, zero, and tty devices using mknod */
         /* You can't do this until you have VFS, check the include/drivers/dev.h
@@ -161,7 +163,7 @@ idleproc_run(int arg1, void *arg2)
         do_mknod("/dev/null", S_IFCHR, MKDEVID(1, 0));
         do_mknod("/dev/zero", S_IFCHR, MKDEVID(1, 1));
         do_mknod("/dev/tty0", S_IFCHR, MKDEVID(2, 0));
-        NOT_YET_IMPLEMENTED("VFS: idleproc_run");
+        // NOT_YET_IMPLEMENTED("VFS: idleproc_run");
 #endif
 
         /* Finally, enable interrupts (we want to make sure interrupts
@@ -259,17 +261,19 @@ initproc_run(int arg1, void *arg2)
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
         // dbg(DBG_PRINT,"INITPROC RAN!");
         // return NULL;
-    #ifdef __DRIVERS__
+//     #ifdef __DRIVERS__
 
-        kshell_add_command("faber-test", do_faber_test, "invoke do_faber_test()...");
-        kshell_add_command("sunghan-test", do_sunghan_test, "invoke do_shungan_test()...");
-        kshell_add_command("sunghan-deadlock-test", do_sunghan_deadlock_test, "invoke do_shungan_deadlock_test()...");
+//         kshell_add_command("faber-test", do_faber_test, "invoke do_faber_test()...");
+//         kshell_add_command("sunghan-test", do_sunghan_test, "invoke do_shungan_test()...");
+//         kshell_add_command("sunghan-deadlock-test", do_sunghan_deadlock_test, "invoke do_shungan_deadlock_test()...");
 
-        kshell_t *kshell = kshell_create(0);
-        if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
-        while (kshell_execute_next(kshell));
-        kshell_destroy(kshell);
+//         kshell_t *kshell = kshell_create(0);
+//         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
+//         while (kshell_execute_next(kshell));
+//         kshell_destroy(kshell);
 
-    #endif /* __DRIVERS__ */
+//     #endif /* __DRIVERS__ */
+
+        vfstest_main(1, NULL);
     return NULL;
 }

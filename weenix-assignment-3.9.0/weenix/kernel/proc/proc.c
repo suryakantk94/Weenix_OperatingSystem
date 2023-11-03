@@ -281,7 +281,15 @@ proc_create(char *name)
             proc_initproc = p;
             dbg(DBG_PRINT, "(GRADING1A)\n");
         }
-
+        #ifdef __VFS__
+                for(int i = 0; i < NFILES;i++){
+                        p->p_files[i] = NULL;
+                }
+                if(p->p_pid > 1 && curproc->p_pid != 0 && curproc->p_cwd){
+                        p->p_cwd = curproc->p_cwd;
+                        vref(p->p_cwd);
+                }
+        #endif
         sched_queue_init(&p->p_wait);
         p->p_pagedir = pt_create_pagedir();
 
@@ -336,6 +344,19 @@ void proc_cleanup(int status)
                 }
                 list_iterate_end();
         }
+
+        #ifdef __VFS__
+        for (int fd = 0; fd < NFILES; fd++)
+        {
+                if(curproc->p_files[fd] != NULL){
+                        do_close(fd);
+                }
+        }
+        if(curproc->p_pid == 1 || curproc->p_pid > 2){
+                vput(curproc->p_cwd);
+        }
+        #endif
+
         //        Setting appropriate state and status
         curproc->p_status = status;
         curproc->p_state = PROC_DEAD;

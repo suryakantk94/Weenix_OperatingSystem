@@ -110,7 +110,7 @@ int do_write(int fd, const void *buf, size_t nbytes)
         {
                 return -EBADF;
         }
-        if (file->f_mode != FMODE_WRITE)
+        if ((file->f_mode != FMODE_WRITE) && (file->f_mode != FMODE_APPEND))
         {
                 fput(file);
                 return -EBADF;
@@ -259,65 +259,32 @@ int do_dup2(int ofd, int nfd)
  *      o ENAMETOOLONG
  *        A component of path was too long.
  */
-int do_mknod(const char *path, int mode, unsigned devid)
+int
+do_mknod(const char *path, int mode, unsigned devid)
 {
         // NOT_YET_IMPLEMENTED("VFS: do_mknod");
-
-        if (mode != S_IFCHR && mode != S_IFBLK)
-        {
-                dbg(DBG_PRINT, "(GRADING2B)\n");
-                return -EINVAL;
-        }
-
-        size_t namelen = 0;
+        int mknode_res = -1;
+        devid = (devid_t)devid;
+        vnode_t *parent_vnode, *deviceVnode;
+        size_t name_length = 0;
         const char *name = NULL;
-        vnode_t *dir_vnode = NULL;
-        int ret = dir_namev(path, &namelen, &name, NULL, &dir_vnode); // dir_namev increments ref count of dir_vnode
-        if (ret < 0)
-        {
-                dbg(DBG_PRINT, "(GRADING2B)\n");
-                return ret;
-        }
+        // Get the parent vnode and name of the directory
+        dir_namev(path, &name_length, &name, NULL, &parent_vnode);
 
-        // if (namelen > NAME_LEN)
-        // {
-        //         dbg(DBG_PRINT, "(GRADING2B)\n");
-        //         vput(dir_vnode);
-        //         return -ENAMETOOLONG;
-        // }
+        // Lookup the parent vnode to check if the device already exists
+        lookup(parent_vnode, name, name_length, &deviceVnode);
 
-        // if (!S_ISDIR(dir_vnode->vn_mode))
-        // {
-        //         dbg(DBG_PRINT, "(GRADING2B)\n");
-        //         vput(dir_vnode);
-        //         return -ENOTDIR;
-        // }
+        // Assert that mknod operation is supported by the parent vnode
+        KASSERT(NULL != parent_vnode->vn_ops->mknod);
+        dbg(DBG_PRINT, "(GRADING2A 3.b)\n"); 
 
-        vnode_t *res_vnode = NULL;
-        ret = lookup(dir_vnode, name, namelen, &res_vnode);
-        if (ret == 0)
-        {
-                dbg(DBG_PRINT, "(GRADING2B)\n");
-                vput(dir_vnode);
-                vput(res_vnode);
-                return -EEXIST;
-        }
+        // Call the mknod operation on the parent vnode
+        mknode_res = parent_vnode->vn_ops->mknod(parent_vnode, name, name_length, mode, devid);
 
-        if (ret != -ENOENT)
-        {
-                dbg(DBG_PRINT, "(GRADING2B)\n");
-                vput(dir_vnode);
-                return ret;
-        }
-
-        // KASSERT(NULL != dir_vnode->vn_ops->mknod);
-        // dbg(DBG_PRINT, "(GRADING2A 3.f)\n");
-        ret = dir_vnode->vn_ops->mknod(dir_vnode, name, namelen, mode, devid);
-        vput(dir_vnode);
-        // dbg(DBG_PRINT, "(GRADING2B)\n");
-        return ret;
-
-        // return -1;
+        // Release the reference to the parent vnode
+        vput(parent_vnode);
+        dbg(DBG_PRINT, "(GRADING2A)\n"); 
+        return mknode_res;
 }
 
 /* Use dir_namev() to find the vnode of the dir we want to make the new
@@ -351,13 +318,13 @@ int do_mkdir(const char *path)
                 vput(parent);
                 return -ENOTDIR;
         }
-        if (parent_len > STR_MAX)
+        if (parent_len > (size_t)NAME_LEN)
         {
                 vput(parent);
                 return -ENAMETOOLONG;
         }
         err = lookup(parent, parent_name, parent_len, &exists);
-        if (err != -ENOENT)
+        if (err == 0)
         {
                 vput(parent);
                 vput(exists);
@@ -397,37 +364,40 @@ int do_rmdir(const char *path)
         {
                 return err;
         }
-        if (file_name_len > STR_MAX)
-        {
-                vput(parent);
-                return -ENAMETOOLONG;
-        }
-        if (file_name_len == 1 && file_name[0] == '.')
+        // if (file_name_len > (size_t)NAME_LEN)
+        // {
+        //         vput(parent);
+        //         return -ENAMETOOLONG;
+        // }
+        if (name_match(".", file_name, file_name_len))
         {
                 vput(parent);
                 return -EINVAL;
         }
-        if (file_name_len == 2 && file_name[0] == '.' && file_name[1] == '.')
+        if (name_match("..", file_name, file_name_len))
         {
                 vput(parent);
                 return -ENOTEMPTY;
         }
-        if (!S_ISDIR(parent->vn_mode) || (parent->vn_ops->mkdir == NULL))
+        if (!S_ISDIR(parent->vn_mode) || (parent->vn_ops->rmdir == NULL))
         {
                 vput(parent);
                 return -ENOTDIR;
         }
 
-        int exists_lookup = lookup(parent, file_name, file_name_len, &exists);
-        if (exists_lookup == 0)
-        {
+        // int exists_lookup = lookup(parent, file_name, file_name_len, &exists);
+        // if (exists_lookup == 0)
+        // {
                 int rmdir_res = parent->vn_ops->rmdir(parent, file_name, file_name_len);
+                // if(rmdir_res != 0 ){
+                //         vput(parent);
+                //         return rmdir_res;
+                // }
                 vput(parent);
-                vput(exists);
                 return rmdir_res;
-        }
-        vput(parent);
-        return exists_lookup;
+        // }
+        // vput(parent);
+        // return exists_lookup;
 }
 
 /*
@@ -465,12 +435,12 @@ int do_unlink(const char *path)
         //         return -ENAMETOOLONG;
         // }
 
-        // if (!S_ISDIR(dir_vnode->vn_mode))
-        // {
-        //         dbg(DBG_PRINT, "(GRADING2B)\n");
-        //         vput(dir_vnode);
-        //         return -ENOTDIR;
-        // }
+        if (!S_ISDIR(dir_vnode->vn_mode))
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                return -ENOTDIR;
+        }
 
         vnode_t *res_vnode = NULL;
         ret = lookup(dir_vnode, name, namelen, &res_vnode);
@@ -533,6 +503,13 @@ int do_link(const char *from, const char *to)
                 dbg(DBG_PRINT, "(GRADING2B)\n");
                 return ret;
         }
+if (!S_ISDIR(dir_vnode->vn_mode))
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                // vput(from_vnode);
+                return -ENOTDIR;
+        }
 
         vnode_t *res_vnode = NULL;
         ret = lookup(dir_vnode, name, namelen, &res_vnode); // lookup increments ref count of res_vnode
@@ -546,7 +523,7 @@ int do_link(const char *from, const char *to)
 
         vnode_t *from_vnode = NULL;
         ret = open_namev(from, 0, &from_vnode, NULL);
-        if (ret < 0)
+        if (ret != 0)
         {
                 dbg(DBG_PRINT, "(GRADING2B)\n");
                 vput(dir_vnode);
@@ -605,8 +582,8 @@ int do_chdir(const char *path)
         // return -1;
 
         vnode_t *res_vnode = NULL;
-        int ret = open_namev(path, 0, &res_vnode, NULL);
-        if (ret < 0)
+        int ret = open_namev(path, O_RDONLY, &res_vnode, NULL);
+        if (ret != 0)
         {
                 dbg(DBG_PRINT, "(GRADING2B)\n");
                 return ret;
@@ -640,7 +617,8 @@ int do_chdir(const char *path)
  *      o ENOTDIR
  *        File descriptor does not refer to a directory.
  */
-int do_getdent(int fd, struct dirent *dirp)
+int
+do_getdent(int fd, struct dirent *dirp)
 {
         // NOT_YET_IMPLEMENTED("VFS: do_getdent");
 
@@ -664,25 +642,16 @@ int do_getdent(int fd, struct dirent *dirp)
                 return -ENOTDIR;
         }
 
-        if (file->f_vnode->vn_ops->readdir == NULL)
-        {
-                dbg(DBG_PRINT, "(GRADING2B)\n");
-                fput(file);
-                return -ENOTDIR;
-        }
-
         int ret = file->f_vnode->vn_ops->readdir(file->f_vnode, file->f_pos, dirp);
-        if (ret > 0)
+        file->f_pos += ret;        
+        fput(file);
+        if (ret == 0)
         {
                 dbg(DBG_PRINT, "(GRADING2B)\n");
-                file->f_pos += ret;
+                return ret;
         }
-
-        fput(file);
         dbg(DBG_PRINT, "(GRADING2B)\n");
-        return ret;
-
-        // return -1;
+        return sizeof(dirent_t);
 }
 
 /*
@@ -701,7 +670,7 @@ int do_lseek(int fd, int offset, int whence)
         {
                 return -EBADF;
         }
-        if (whence != SEEK_SET || whence != SEEK_CUR || whence != SEEK_END)
+        if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END)
         {
                 return -EINVAL;
         }
@@ -712,7 +681,7 @@ int do_lseek(int fd, int offset, int whence)
                 return -EBADF;
         }
 
-        int new_pos = file->f_pos;
+        off_t new_pos = file->f_pos;
 
         if (whence == SEEK_SET)
         {

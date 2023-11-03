@@ -104,7 +104,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         const char *start_ptr = pathname; 
         const char *slash_ptr = pathname;
         if(pathname[0] == '/'){
-                start_ptr = vfs_root_vn;
+                start_dir = vfs_root_vn;
                 start_ptr++;
         }
 
@@ -112,12 +112,12 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
         //logic difference, verify
         //no vput?
-        if(strlen(pathname) == 1 && pathname[0] == '/'){
-                *namelen = 0;
-                *name = &pathname[1];
-                *res_vnode = start_dir;
-                return 0;
-        }
+        // if(strlen(pathname) == 1 && pathname[0] == '/'){
+        //         *namelen = 0;
+        //         *name = &pathname[1];
+        //         *res_vnode = start_dir;
+        //         return 0;
+        // }
 
         vnode_t *next_dir = NULL;
 
@@ -125,12 +125,13 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
                 slash_ptr = strchr(start_ptr, '/');
                 // if no more /'s, must be the end of the pathname ending with \0, fetch file details and return
                 if (slash_ptr == NULL) {
-                        *namelen = strlen(start_ptr);
                         *name = start_ptr;
+                        *namelen = strlen(start_ptr);
                         *res_vnode = start_dir;
                         return 0;
                 }
                 else if(slash_ptr == start_ptr){ // if multiple /'s in the path just continue
+                        start_ptr++;
                         continue;
                 }
                 int cur_name_len = slash_ptr - start_ptr;
@@ -149,20 +150,12 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         }
         //if did not return from while, path ends with /
         // verify: vput?
-        if(next_dir == NULL){
-                *namelen = 0;
-                *name = &pathname[start_ptr];
-                *res_vnode = start_dir;
-                return 0;
-        }
-        else{
                 *namelen = 1;
                 const char *cur_dir = ".";
                 *name = cur_dir;
                 *res_vnode = start_dir;
                 return 0;
-        }
-        // return 0;
+      
 }
 
 /* This returns in res_vnode the vnode requested by the other parameters.
@@ -189,7 +182,7 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
                 //dbg(DBG_PRINT, "(GRADING2B)\n"); 
                 return dirname_res;
         }
-        // KASSERT(NULL != name || 0 != name_len);
+        // KASSERT(NULL != name || 0 != namelen);
         // dbg(DBG_PRINT, "(GRADING2B)\n"); 
         int lookup_res =  lookup(parent_dir, name, namelen, res_vnode);
         //if lookup successful : not required? Double check during testing
@@ -219,7 +212,7 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
         return lookup_res;
 }
 
-#ifdef __GETCWD__
+#ifdef _GETCWD_
 /* Finds the name of 'entry' in the directory 'dir'. The name is writen
  * to the given buffer. On success 0 is returned. If 'dir' does not
  * contain 'entry' then -ENOENT is returned. If the given buffer cannot
@@ -251,4 +244,4 @@ lookup_dirpath(vnode_t *dir, char *buf, size_t osize)
 
         return -ENOENT;
 }
-#endif /* __GETCWD__ */
+#endif /* _GETCWD_ */
