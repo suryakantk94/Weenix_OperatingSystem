@@ -243,6 +243,22 @@ int do_sunghan_deadlock_test(kshell_t *kshell, int argc, char **argv){
 }
 #endif /* __DRIVERS__ */
 
+#ifdef __VFS__
+int do_vfstest(kshell_t* kshell, int argc, char **argv){
+        KASSERT(NULL != kshell);
+    proc_t *p = proc_create("vfs_test");
+    kthread_t *t = kthread_create(p, vfstest_main, 1, NULL);
+    int status;
+
+    sched_make_runnable(t);
+    int child = do_waitpid(p->p_pid, 0, &status);
+    return 0;
+}
+
+#endif /* __VFS__ */
+
+
+
 
 /**
  * The init thread's function changes depending on how far along your Weenix is
@@ -261,19 +277,26 @@ initproc_run(int arg1, void *arg2)
 //        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
         // dbg(DBG_PRINT,"INITPROC RAN!");
         // return NULL;
-//     #ifdef __DRIVERS__
+    #ifdef __DRIVERS__
 
-//         kshell_add_command("faber-test", do_faber_test, "invoke do_faber_test()...");
-//         kshell_add_command("sunghan-test", do_sunghan_test, "invoke do_shungan_test()...");
-//         kshell_add_command("sunghan-deadlock-test", do_sunghan_deadlock_test, "invoke do_shungan_deadlock_test()...");
+        kshell_add_command("faber-test", do_faber_test, "invoke do_faber_test()...");
+        kshell_add_command("sunghan-test", do_sunghan_test, "invoke do_shungan_test()...");
+        kshell_add_command("sunghan-deadlock-test", do_sunghan_deadlock_test, "invoke do_shungan_deadlock_test()...");
 
-//         kshell_t *kshell = kshell_create(0);
-//         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
-//         while (kshell_execute_next(kshell));
-//         kshell_destroy(kshell);
+        #ifdef __VFS__
+        
+        kshell_add_command("vfs-test", do_vfstest, "invoke do_vfstest()...");
+        kshell_add_command("faber-fs-test", faber_fs_thread_test, "invoke faber_fs_thread_test()...");
+        kshell_add_command("faber-dir-test", faber_directory_test, "invoke faber_directory_test()...");
+        
+        #endif
+        kshell_t *kshell = kshell_create(0);
+        if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
+        while (kshell_execute_next(kshell));
+        kshell_destroy(kshell);
 
-//     #endif /* __DRIVERS__ */
+    #endif /* __DRIVERS__ */
 
-        vfstest_main(1, NULL);
+        // vfstest_main(1, NULL);
     return NULL;
 }

@@ -75,7 +75,7 @@ int do_read(int fd, void *buf, size_t nbytes)
         {
                 return -EBADF;
         }
-        if (file->f_mode != FMODE_READ)
+        if (!(file->f_mode & FMODE_READ))
         {
                 fput(file);
                 return -EBADF;
@@ -110,12 +110,12 @@ int do_write(int fd, const void *buf, size_t nbytes)
         {
                 return -EBADF;
         }
-        if ((file->f_mode != FMODE_WRITE) && (file->f_mode != FMODE_APPEND))
+        if (!(file->f_mode & FMODE_WRITE) && !(file->f_mode & FMODE_APPEND))
         {
                 fput(file);
                 return -EBADF;
         }
-        if (file->f_mode & FMODE_APPEND)
+        if ((file->f_mode & FMODE_APPEND) == FMODE_APPEND)
         {
                 do_lseek(fd, 0, SEEK_END);
         }
@@ -167,7 +167,11 @@ int do_close(int fd)
 int do_dup(int fd)
 {
         // NOT_YET_IMPLEMENTED("VFS: do_dup");
-
+if (fd < 0 || fd >= NFILES)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return -EBADF;
+        }
         file_t *file = fget(fd);
         if (file == NULL)
         {
@@ -202,6 +206,7 @@ int do_dup(int fd)
 int do_dup2(int ofd, int nfd)
 {
         // NOT_YET_IMPLEMENTED("VFS: do_dup2");
+       
 
         if (ofd < 0 || ofd >= NFILES || nfd < 0 || nfd >= NFILES)
         {
@@ -209,17 +214,19 @@ int do_dup2(int ofd, int nfd)
                 return -EBADF;
         }
 
-        if (ofd == nfd)
-        {
-                dbg(DBG_PRINT, "(GRADING2B)\n");
-                return nfd;
-        }
+       
 
         file_t *file = fget(ofd);
         if (file == NULL)
         {
                 dbg(DBG_PRINT, "(GRADING2B)\n");
                 return -EBADF;
+        }
+         if (ofd == nfd)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                fput(file);
+                return nfd;
         }
 
         if (curproc->p_files[nfd] != NULL)
@@ -259,32 +266,65 @@ int do_dup2(int ofd, int nfd)
  *      o ENAMETOOLONG
  *        A component of path was too long.
  */
-int
-do_mknod(const char *path, int mode, unsigned devid)
+int do_mknod(const char *path, int mode, unsigned devid)
 {
         // NOT_YET_IMPLEMENTED("VFS: do_mknod");
-        int mknode_res = -1;
-        devid = (devid_t)devid;
-        vnode_t *parent_vnode, *deviceVnode;
-        size_t name_length = 0;
+
+        if (mode != S_IFCHR && mode != S_IFBLK)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return -EINVAL;
+        }
+
+        size_t namelen = 0;
         const char *name = NULL;
-        // Get the parent vnode and name of the directory
-        dir_namev(path, &name_length, &name, NULL, &parent_vnode);
+        vnode_t *dir_vnode = NULL;
+        int ret = dir_namev(path, &namelen, &name, NULL, &dir_vnode); // dir_namev increments ref count of dir_vnode
+        if (ret < 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                return ret;
+        }
 
-        // Lookup the parent vnode to check if the device already exists
-        lookup(parent_vnode, name, name_length, &deviceVnode);
+        // if (namelen > NAME_LEN)
+        // {
+        //         dbg(DBG_PRINT, "(GRADING2B)\n");
+        //         vput(dir_vnode);
+        //         return -ENAMETOOLONG;
+        // }
 
-        // Assert that mknod operation is supported by the parent vnode
-        KASSERT(NULL != parent_vnode->vn_ops->mknod);
-        dbg(DBG_PRINT, "(GRADING2A 3.b)\n"); 
+        // if (!S_ISDIR(dir_vnode->vn_mode))
+        // {
+        //         dbg(DBG_PRINT, "(GRADING2B)\n");
+        //         vput(dir_vnode);
+        //         return -ENOTDIR;
+        // }
 
-        // Call the mknod operation on the parent vnode
-        mknode_res = parent_vnode->vn_ops->mknod(parent_vnode, name, name_length, mode, devid);
+        vnode_t *res_vnode = NULL;
+        ret = lookup(dir_vnode, name, namelen, &res_vnode);
+        if (ret == 0)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                vput(res_vnode);
+                return -EEXIST;
+        }
 
-        // Release the reference to the parent vnode
-        vput(parent_vnode);
-        dbg(DBG_PRINT, "(GRADING2A)\n"); 
-        return mknode_res;
+        if (ret != -ENOENT)
+        {
+                dbg(DBG_PRINT, "(GRADING2B)\n");
+                vput(dir_vnode);
+                return ret;
+        }
+
+        // KASSERT(NULL != dir_vnode->vn_ops->mknod);
+        // dbg(DBG_PRINT, "(GRADING2A 3.f)\n");
+        ret = dir_vnode->vn_ops->mknod(dir_vnode, name, namelen, mode, devid);
+        vput(dir_vnode);
+        // dbg(DBG_PRINT, "(GRADING2B)\n");
+        return ret;
+
+        // return -1;
 }
 
 /* Use dir_namev() to find the vnode of the dir we want to make the new
