@@ -46,11 +46,14 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
         //dbg(DBG_VFS,"VFS: Enter lookup(), look for %s, length %d\n", name, len);
         //preconditions:
         KASSERT(NULL != dir);
+        dbg(DBG_PRINT, "(GRADING2A 2.a)\n");
         KASSERT(NULL != name);
+        dbg(DBG_PRINT, "(GRADING2A 2.a)\n");
         KASSERT(NULL != result);
+        dbg(DBG_PRINT, "(GRADING2A 2.a)\n");
         if(dir->vn_ops->lookup==NULL)
         {
-            //dbg(DBG_VFS,"VFS: Leave lookup(), return error ENOTDIR\n");
+            dbg(DBG_PRINT, "(GRADING2B)\n"); 
             return -ENOTDIR;
         }
         // else if(len>STR_MAX)
@@ -61,10 +64,11 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
         else
         {
             int val = dir->vn_ops->lookup(dir,name,len,result);
-        //     dbg(DBG_VFS,"VFS: Leave lookup(), find %s, error=%d\n", name, ret);
+            dbg(DBG_PRINT, "(GRADING2A)\n");
             return val;
         }
-        return 0;
+
+        // return 0;
 }
 
 
@@ -93,8 +97,11 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         //NOT_YET_IMPLEMENTED("VFS: dir_namev");
         //preconditions:
         KASSERT(NULL != pathname);
+        dbg(DBG_PRINT, "(GRADING2A 2.b)\n");
         KASSERT(NULL != namelen);
+        dbg(DBG_PRINT, "(GRADING2A 2.b)\n");
         KASSERT(NULL != name);
+        dbg(DBG_PRINT, "(GRADING2A 2.b)\n");
         KASSERT(NULL != res_vnode);
         dbg(DBG_PRINT,"(GRADING2A 2.b)\n");
 
@@ -106,18 +113,10 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
         if(pathname[0] == '/'){
                 start_dir = vfs_root_vn;
                 start_ptr++;
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
         }
 
         vref(start_dir);
-
-        //logic difference, verify
-        //no vput?
-        // if(strlen(pathname) == 1 && pathname[0] == '/'){
-        //         *namelen = 0;
-        //         *name = &pathname[1];
-        //         *res_vnode = start_dir;
-        //         return 0;
-        // }
 
         vnode_t *next_dir = NULL;
 
@@ -128,33 +127,39 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
                         *name = start_ptr;
                         *namelen = strlen(start_ptr);
                         *res_vnode = start_dir;
+                        dbg(DBG_PRINT, "(GRADING2B)\n"); 
                         return 0;
                 }
-                else if(slash_ptr == start_ptr){ // if multiple /'s in the path just continue
+                else if(slash_ptr == start_ptr){ // if multiple /'s in the path continue to find the next non / character
                         start_ptr++;
+                        dbg(DBG_PRINT, "(GRADING2B)\n"); 
                         continue;
                 }
                 int cur_name_len = slash_ptr - start_ptr;
                 //str_max check??
                 //move ahead from the /
                 slash_ptr++;
-
+                // KASSERT(NULL != start_dir);
                 int lookup_res = lookup(start_dir, start_ptr, cur_name_len, &next_dir);
                 if(lookup_res != 0){
                         vput(start_dir);
+                        dbg(DBG_PRINT, "(GRADING2B)\n"); 
                         return lookup_res;
                 }
+                KASSERT(NULL != next_dir);
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
                 vput(start_dir);
                 start_dir = next_dir;
                 start_ptr = slash_ptr;                
         }
         //if did not return from while, path ends with /
         // verify: vput?
-                *namelen = 1;
-                const char *cur_dir = ".";
-                *name = cur_dir;
-                *res_vnode = start_dir;
-                return 0;
+        *namelen = 1;
+        const char *cur_dir = ".";
+        *name = cur_dir;
+        *res_vnode = start_dir;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return 0;
       
 }
 
@@ -179,7 +184,7 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
         //dbg(DBG_PRINT, "(GRADING2B)\n"); 
         int dirname_res = dir_namev(pathname, &namelen, &name, base, &parent_dir);
         if(dirname_res != 0){
-                //dbg(DBG_PRINT, "(GRADING2B)\n"); 
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
                 return dirname_res;
         }
         // KASSERT(NULL != name || 0 != namelen);
@@ -202,13 +207,13 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 
                 int create_res = parent_dir->vn_ops->create(parent_dir, name, namelen, res_vnode);
                 vput(parent_dir);
-                //dbg(DBG_PRINT, "(GRADING2B)\n"); 
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
                 return create_res;
                 
         }
 
         vput(parent_dir);
-        // dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
         return lookup_res;
 }
 
