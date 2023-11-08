@@ -146,11 +146,13 @@ idleproc_run(int arg1, void *arg2)
 #ifdef __VFS__
         /* Once you have VFS remember to set the current working directory
          * of the idle and init processes */
+        dbg(DBG_PRINT, "(GRADING2B)\n");
         initthr->kt_proc->p_cwd = vfs_root_vn;
         curproc->p_cwd = vfs_root_vn;
         
         vref(curproc->p_cwd);
         vref(initthr->kt_proc->p_cwd);
+        dbg(DBG_PRINT, "(GRADING2B)\n");
 
         
         
@@ -163,6 +165,7 @@ idleproc_run(int arg1, void *arg2)
         do_mknod("/dev/null", S_IFCHR, MKDEVID(1, 0));
         do_mknod("/dev/zero", S_IFCHR, MKDEVID(1, 1));
         do_mknod("/dev/tty0", S_IFCHR, MKDEVID(2, 0));
+        dbg(DBG_PRINT, "(GRADING2B)\n");
         // NOT_YET_IMPLEMENTED("VFS: idleproc_run");
 #endif
 
