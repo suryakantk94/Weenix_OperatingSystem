@@ -1,6 +1,8 @@
 {
   "files.associations": {
     "*.py": "python",
-    "proc.h": "c"
+    "proc.h": "c",
+    "usertest.h": "c",
+    "vfstest.h": "c"
   }
 }

@@ -81,7 +81,7 @@ int do_read(int fd, void *buf, size_t nbytes)
         {
                 fput(file);
                 dbg(DBG_PRINT, "(GRADING2B)\n");
-                return -EBADF;
+                return -EBADF;l
         }
         if (S_ISDIR(file->f_vnode->vn_mode))
         {
@@ -130,6 +130,11 @@ int do_write(int fd, const void *buf, size_t nbytes)
         }
         int bytes_written = file->f_vnode->vn_ops->write(file->f_vnode, file->f_pos, buf, nbytes);
         file->f_pos = file->f_pos + bytes_written;
+
+        KASSERT((S_ISCHR(f->f_vnode->vn_mode)) ||
+                        (S_ISBLK(f->f_vnode->vn_mode)) ||
+                        ((S_ISREG(f->f_vnode->vn_mode)) && (f->f_pos <= f->f_vnode->vn_len)));
+
         fput(file);
         dbg(DBG_PRINT, "(GRADING2B)\n");
         return bytes_written;
@@ -327,8 +332,7 @@ int do_mknod(const char *path, int mode, unsigned devid)
                 return ret;
         }
 
-        // KASSERT(NULL != dir_vnode->vn_ops->mknod);
-        // dbg(DBG_PRINT, "(GRADING2A 3.f)\n");
+        KASSERT(NULL != dir_vnode->vn_ops->mknod);
         ret = dir_vnode->vn_ops->mknod(dir_vnode, name, namelen, mode, devid);
         vput(dir_vnode);
         dbg(DBG_PRINT, "(GRADING2B)\n");
@@ -384,6 +388,7 @@ int do_mkdir(const char *path)
                 dbg(DBG_PRINT, "(GRADING2B)\n");
                 return -EEXIST;
         }
+        KASSERT(NULL != dir_vnode->vn_ops->mkdir);
         int mkdir_res = parent->vn_ops->mkdir(parent, parent_name, parent_len);
         vput(parent);
         dbg(DBG_PRINT, "(GRADING2B)\n");
@@ -447,6 +452,7 @@ int do_rmdir(const char *path)
         // int exists_lookup = lookup(parent, file_name, file_name_len, &exists);
         // if (exists_lookup == 0)
         // {
+        KASSERT(NULL != dir_vnode->vn_ops->rmdir);
         int rmdir_res = parent->vn_ops->rmdir(parent, file_name, file_name_len);
         // if(rmdir_res != 0 ){
         //         vput(parent);
@@ -519,8 +525,7 @@ int do_unlink(const char *path)
                 return -EPERM;
         }
 
-        // KASSERT(NULL != dir_vnode->vn_ops->unlink);
-        // dbg(DBG_PRINT, "(GRADING2A 3.g)\n");
+        KASSERT(NULL != dir_vnode->vn_ops->unlink);
         ret = dir_vnode->vn_ops->unlink(dir_vnode, name, namelen);
         vput(dir_vnode);
         vput(res_vnode);
@@ -809,6 +814,7 @@ int do_stat(const char *path, struct stat *buf)
                         dbg(DBG_PRINT, "(GRADING2B)\n");
                         return -ENOTDIR;
                 }
+                KASSERT(NULL != vn->vn_ops->stat);
                 int stat_res = vnode->vn_ops->stat(vnode, buf);
                 vput(vnode);
                 dbg(DBG_PRINT, "(GRADING2B)\n");
