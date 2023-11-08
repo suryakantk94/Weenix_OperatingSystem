@@ -88,104 +88,95 @@ get_empty_fd(proc_t *p)
  *        exists.
  */
 
-int
-do_open(const char *filename, int oflags)
-{
-        // NOT_YET_IMPLEMENTED("VFS: do_open");
-        // Get an empty file descriptor
-        int fd = get_empty_fd(curproc);
+int do_open(const char *filename, int oflags) {
 
-        // Get a fresh file_t
-        file_t *fresh_file = fget(-1);
-        
-        curproc->p_files[fd] = fresh_file;
+    int fd = get_empty_fd(curproc);
 
-        // Set the initial file mode to 0
-        fresh_file->f_mode = 0;
+    file_t *f = fget(-1);
 
-        dbg(DBG_PRINT, "(GRADING2B)\n"); //
+    curproc->p_files[fd] = f;
+    
+    f->f_mode = 0;
 
-        // Set the file mode based on the provided oflags
-        if (((oflags & O_WRONLY) == O_WRONLY) && ((oflags & O_RDWR) == O_RDWR))
-        {
-                // Invalid flags: both O_WRONLY and O_RDWR are set
-                fput(fresh_file);
-                curproc->p_files[fd] = NULL;
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-                return -EINVAL;
-        }
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if (((oflags & O_RDWR) == O_RDWR) && ((oflags & O_WRONLY) == O_WRONLY))
+    {
+        curproc->p_files[fd] = NULL;
+        fput(f);
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return -EINVAL;
+    }
 
-        if ((oflags & O_RDONLY) == O_RDONLY)
-        {
-                fresh_file->f_mode = FMODE_READ;
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-        }
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if ((oflags & O_RDONLY) == O_RDONLY) {
+        f->f_mode = FMODE_READ;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    }
+    
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if ((oflags & O_WRONLY) == O_WRONLY) {
+        f->f_mode = FMODE_WRITE;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    }
+    
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if ((oflags & O_RDWR) == O_RDWR) {
+        f->f_mode = (FMODE_READ | FMODE_WRITE);
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    }
+    
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if ((oflags & O_APPEND) == O_APPEND) {
+        f->f_mode |= FMODE_APPEND;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    }
 
-        if ((oflags & O_WRONLY) == O_WRONLY)
-        {
-                fresh_file->f_mode = FMODE_WRITE;
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-        }
+    vnode_t *vno = NULL;
+    int ret = open_namev(filename, oflags, &vno, NULL);
+    
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if (ret != 0) { 
+        fput(f);
+        curproc->p_files[fd] = NULL;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return ret;
+    } 
 
-        if ((oflags & O_RDWR) == O_RDWR)
-        {
-                fresh_file->f_mode = (FMODE_READ | FMODE_WRITE);
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-        }
+    if (S_ISDIR(vno->vn_mode) && (oflags & (O_WRONLY | O_RDWR))) {
+        vput(vno);
+        fput(f);
+        curproc->p_files[fd] = NULL;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return -EISDIR;
+    }
 
-        if ((oflags & O_APPEND) == O_APPEND)
-        {
-                fresh_file->f_mode |= FMODE_APPEND;
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-        }
+    if (strlen(filename) > NAME_LEN) {
+        vput(vno);
+        fput(f);
+        curproc->p_files[fd] = NULL;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return -ENAMETOOLONG;
+    }
 
-        // Get the vnode for the file
-        vnode_t *res_vnode;
+    if (strlen(filename) > 0 && filename[strlen(filename) - 1] == '/' && !S_ISDIR(vno->vn_mode)) {
+        vput(vno);
+        fput(f);
+        curproc->p_files[fd] = NULL;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return -ENOTDIR;
+    }
 
-        // Check if the filename exceeds the maximum length
-        if (strlen(filename) > NAME_LEN)
-        {
-                fput(fresh_file);
-                curproc->p_files[fd] = NULL;
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-                return -ENAMETOOLONG;
-        }
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
 
-        // Call open_namev to retrieve the vnode for the file
-        int res = open_namev(filename, oflags, &res_vnode, NULL);
+    f->f_vnode = vno;
+    f->f_pos = 0; 
 
-        if (res != 0)
-        {
-                // Failed to open the file, remove the file descriptor
-                fput(fresh_file);
-                curproc->p_files[fd] = NULL;
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-                return res;
-        }
-        else if (S_ISDIR(res_vnode->vn_mode) && (((oflags & O_RDWR) == O_RDWR) || ((oflags & O_WRONLY) == O_WRONLY)))
-        {
-                // Opening a directory with write access
-                vput(res_vnode);
-                fput(fresh_file);
-                curproc->p_files[fd] = NULL;
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-                return -EISDIR;
-        }
-
-        if (strlen(filename) > 0 && filename[strlen(filename) - 1] == '/' && !S_ISDIR(res_vnode->vn_mode))
-        {
-                // Filename ends with '/' but is not a directory
-                vput(res_vnode);
-                fput(fresh_file);
-                curproc->p_files[fd] = NULL;
-                dbg(DBG_PRINT, "(GRADING2B)\n"); //
-                return -ENOTDIR;
-        }
-
-        // Fill in the file_t fields
-        fresh_file->f_vnode = res_vnode;
-        fresh_file->f_pos = 0;
-
-        dbg(DBG_PRINT, "(GRADING2B)\n"); //
-        return fd;
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    return fd; 
 }
