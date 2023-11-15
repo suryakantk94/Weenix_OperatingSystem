@@ -42,8 +42,33 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
-        NOT_YET_IMPLEMENTED("VFS: lookup");
-        return 0;
+        //NOT_YET_IMPLEMENTED("VFS: lookup");
+        //dbg(DBG_VFS,"VFS: Enter lookup(), look for %s, length %d\n", name, len);
+        //preconditions:
+        KASSERT(NULL != dir);
+        dbg(DBG_PRINT, "(GRADING2A 2.a)\n");
+        KASSERT(NULL != name);
+        dbg(DBG_PRINT, "(GRADING2A 2.a)\n");
+        KASSERT(NULL != result);
+        dbg(DBG_PRINT, "(GRADING2A 2.a)\n");
+        if(dir->vn_ops->lookup==NULL)
+        {
+            dbg(DBG_PRINT, "(GRADING2B)\n"); 
+            return -ENOTDIR;
+        }
+        // else if(len>STR_MAX)
+        // {
+        //     dbg(DBG_VFS,"VFS: Leave lookup(), return error ENAMETOOLONG\n");
+        //     return -ENAMETOOLONG;
+        // }
+        else
+        {
+            int val = dir->vn_ops->lookup(dir,name,len,result);
+            dbg(DBG_PRINT, "(GRADING2A)\n");
+            return val;
+        }
+
+        // return 0;
 }
 
 
@@ -69,8 +94,73 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-        NOT_YET_IMPLEMENTED("VFS: dir_namev");
+        //NOT_YET_IMPLEMENTED("VFS: dir_namev");
+        //preconditions:
+        KASSERT(NULL != pathname);
+        dbg(DBG_PRINT, "(GRADING2A 2.b)\n");
+        KASSERT(NULL != namelen);
+        dbg(DBG_PRINT, "(GRADING2A 2.b)\n");
+        KASSERT(NULL != name);
+        dbg(DBG_PRINT, "(GRADING2A 2.b)\n");
+        KASSERT(NULL != res_vnode);
+        dbg(DBG_PRINT,"(GRADING2A 2.b)\n");
+
+        vnode_t *start_dir = NULL;
+        start_dir = base == NULL ? curproc->p_cwd : base;
+
+        const char *start_ptr = pathname; 
+        const char *slash_ptr = pathname;
+        if(pathname[0] == '/'){
+                start_dir = vfs_root_vn;
+                start_ptr++;
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        }
+
+        vref(start_dir);
+
+        vnode_t *next_dir = NULL;
+
+        while (*start_ptr != '\0') {
+                slash_ptr = strchr(start_ptr, '/');
+                // if no more /'s, must be the end of the pathname ending with \0, fetch file details and return
+                if (slash_ptr == NULL) {
+                        *name = start_ptr;
+                        *namelen = strlen(start_ptr);
+                        *res_vnode = start_dir;
+                        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+                        return 0;
+                }
+                else if(slash_ptr == start_ptr){ // if multiple /'s in the path continue to find the next non / character
+                        start_ptr++;
+                        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+                        continue;
+                }
+                int cur_name_len = slash_ptr - start_ptr;
+                //str_max check??
+                //move ahead from the /
+                slash_ptr++;
+                // KASSERT(NULL != start_dir);
+                int lookup_res = lookup(start_dir, start_ptr, cur_name_len, &next_dir);
+                if(lookup_res != 0){
+                        vput(start_dir);
+                        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+                        return lookup_res;
+                }
+                KASSERT(NULL != next_dir);
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
+                vput(start_dir);
+                start_dir = next_dir;
+                start_ptr = slash_ptr;                
+        }
+        //if did not return from while, path ends with /
+        // verify: vput?
+        *namelen = 1;
+        const char *cur_dir = ".";
+        *name = cur_dir;
+        *res_vnode = start_dir;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
         return 0;
+      
 }
 
 /* This returns in res_vnode the vnode requested by the other parameters.
@@ -87,11 +177,47 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-        NOT_YET_IMPLEMENTED("VFS: open_namev");
-        return 0;
+        // NOT_YET_IMPLEMENTED("VFS: open_namev");
+        const char *name = NULL;
+        size_t namelen;
+        vnode_t *parent_dir;
+        //dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        int dirname_res = dir_namev(pathname, &namelen, &name, base, &parent_dir);
+        if(dirname_res != 0){
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
+                return dirname_res;
+        }
+        // KASSERT(NULL != name || 0 != namelen);
+        // dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        int lookup_res =  lookup(parent_dir, name, namelen, res_vnode);
+        //if lookup successful : not required? Double check during testing
+        // if(!lookup_res){
+        //         vput(parent_dir); //free 
+        //         //dbg(DBG_PRINT, "(GRADING2B)\n");
+        //         return 0;
+        // }
+
+        //if error is -ENOENT and the flag is O_CREAT, creating new vnode
+        if (lookup_res == -ENOENT && (flag & O_CREAT))
+        {
+                // Verify that the create operation exists for the parent directory
+                KASSERT(NULL != parent_dir->vn_ops->create);
+                dbg(DBG_PRINT, "(GRADING2A 2.c)\n");
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
+
+                int create_res = parent_dir->vn_ops->create(parent_dir, name, namelen, res_vnode);
+                vput(parent_dir);
+                dbg(DBG_PRINT, "(GRADING2B)\n"); 
+                return create_res;
+                
+        }
+
+        vput(parent_dir);
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return lookup_res;
 }
 
-#ifdef __GETCWD__
+#ifdef _GETCWD_
 /* Finds the name of 'entry' in the directory 'dir'. The name is writen
  * to the given buffer. On success 0 is returned. If 'dir' does not
  * contain 'entry' then -ENOENT is returned. If the given buffer cannot
@@ -123,4 +249,4 @@ lookup_dirpath(vnode_t *dir, char *buf, size_t osize)
 
         return -ENOENT;
 }
-#endif /* __GETCWD__ */
+#endif /* _GETCWD_ */

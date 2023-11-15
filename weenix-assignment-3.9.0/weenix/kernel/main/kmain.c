@@ -146,12 +146,27 @@ idleproc_run(int arg1, void *arg2)
 #ifdef __VFS__
         /* Once you have VFS remember to set the current working directory
          * of the idle and init processes */
-        NOT_YET_IMPLEMENTED("VFS: idleproc_run");
+        dbg(DBG_PRINT, "(GRADING2B)\n");
+        initthr->kt_proc->p_cwd = vfs_root_vn;
+        curproc->p_cwd = vfs_root_vn;
+        
+        vref(curproc->p_cwd);
+        vref(initthr->kt_proc->p_cwd);
+        dbg(DBG_PRINT, "(GRADING2B)\n");
+
+        
+        
+        // NOT_YET_IMPLEMENTED("VFS: idleproc_run");
 
         /* Here you need to make the null, zero, and tty devices using mknod */
         /* You can't do this until you have VFS, check the include/drivers/dev.h
          * file for macros with the device ID's you will need to pass to mknod */
-        NOT_YET_IMPLEMENTED("VFS: idleproc_run");
+        do_mkdir("/dev");
+        do_mknod("/dev/null", S_IFCHR, MKDEVID(1, 0));
+        do_mknod("/dev/zero", S_IFCHR, MKDEVID(1, 1));
+        do_mknod("/dev/tty0", S_IFCHR, MKDEVID(2, 0));
+        dbg(DBG_PRINT, "(GRADING2B)\n");
+        // NOT_YET_IMPLEMENTED("VFS: idleproc_run");
 #endif
 
         /* Finally, enable interrupts (we want to make sure interrupts
@@ -231,6 +246,22 @@ int do_sunghan_deadlock_test(kshell_t *kshell, int argc, char **argv){
 }
 #endif /* __DRIVERS__ */
 
+#ifdef __VFS__
+int do_vfstest(kshell_t* kshell, int argc, char **argv){
+        KASSERT(NULL != kshell);
+    proc_t *p = proc_create("vfs_test");
+    kthread_t *t = kthread_create(p, vfstest_main, 1, NULL);
+    int status;
+
+    sched_make_runnable(t);
+    int child = do_waitpid(p->p_pid, 0, &status);
+    return 0;
+}
+
+#endif /* __VFS__ */
+
+
+
 
 /**
  * The init thread's function changes depending on how far along your Weenix is
@@ -255,11 +286,20 @@ initproc_run(int arg1, void *arg2)
         kshell_add_command("sunghan-test", do_sunghan_test, "invoke do_shungan_test()...");
         kshell_add_command("sunghan-deadlock-test", do_sunghan_deadlock_test, "invoke do_shungan_deadlock_test()...");
 
+        #ifdef __VFS__
+        
+        kshell_add_command("vfs-test", do_vfstest, "invoke do_vfstest()...");
+        kshell_add_command("faber-fs-test", faber_fs_thread_test, "invoke faber_fs_thread_test()...");
+        kshell_add_command("faber-dir-test", faber_directory_test, "invoke faber_directory_test()...");
+        
+        #endif
         kshell_t *kshell = kshell_create(0);
         if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
         while (kshell_execute_next(kshell));
         kshell_destroy(kshell);
 
     #endif /* __DRIVERS__ */
+
+        // vfstest_main(1, NULL);
     return NULL;
 }

@@ -88,9 +88,95 @@ get_empty_fd(proc_t *p)
  *        exists.
  */
 
-int
-do_open(const char *filename, int oflags)
-{
-        NOT_YET_IMPLEMENTED("VFS: do_open");
-        return -1;
+int do_open(const char *filename, int oflags) {
+
+    int fd = get_empty_fd(curproc);
+
+    file_t *f = fget(-1);
+
+    curproc->p_files[fd] = f;
+    
+    f->f_mode = 0;
+
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if (((oflags & O_RDWR) == O_RDWR) && ((oflags & O_WRONLY) == O_WRONLY))
+    {
+        curproc->p_files[fd] = NULL;
+        fput(f);
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return -EINVAL;
+    }
+
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if ((oflags & O_RDONLY) == O_RDONLY) {
+        f->f_mode = FMODE_READ;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    }
+    
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if ((oflags & O_WRONLY) == O_WRONLY) {
+        f->f_mode = FMODE_WRITE;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    }
+    
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if ((oflags & O_RDWR) == O_RDWR) {
+        f->f_mode = (FMODE_READ | FMODE_WRITE);
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    }
+    
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if ((oflags & O_APPEND) == O_APPEND) {
+        f->f_mode |= FMODE_APPEND;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    }
+
+    vnode_t *vno = NULL;
+    int ret = open_namev(filename, oflags, &vno, NULL);
+    
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    
+    if (ret != 0) { 
+        fput(f);
+        curproc->p_files[fd] = NULL;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return ret;
+    } 
+
+    if (S_ISDIR(vno->vn_mode) && (oflags & (O_WRONLY | O_RDWR))) {
+        vput(vno);
+        fput(f);
+        curproc->p_files[fd] = NULL;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return -EISDIR;
+    }
+
+    if (strlen(filename) > NAME_LEN) {
+        vput(vno);
+        fput(f);
+        curproc->p_files[fd] = NULL;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return -ENAMETOOLONG;
+    }
+
+    if (strlen(filename) > 0 && filename[strlen(filename) - 1] == '/' && !S_ISDIR(vno->vn_mode)) {
+        vput(vno);
+        fput(f);
+        curproc->p_files[fd] = NULL;
+        dbg(DBG_PRINT, "(GRADING2B)\n"); 
+        return -ENOTDIR;
+    }
+
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+
+    f->f_vnode = vno;
+    f->f_pos = 0; 
+
+    dbg(DBG_PRINT, "(GRADING2B)\n"); 
+    return fd; 
 }

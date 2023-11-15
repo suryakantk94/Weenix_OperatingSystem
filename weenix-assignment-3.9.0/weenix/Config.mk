@@ -11,7 +11,7 @@
 # are built. To enable something set it to 1, otherwise set it to 0.
 #
      DRIVERS=1
-         VFS=0
+         VFS=1
         S5FS=0
           VM=0
      DYNAMIC=0
@@ -37,7 +37,7 @@
 # all the printout from dbg() statements.
 #
 # If you change this value, you must do "make clean" and "make".
-        GDBWAIT=0
+        GDBWAIT=1
 
 # Set which CS402 tests are to run.  Valid from 0 (no tests except running init)
 # to 10 (run all tests plus student tests).
