@@ -185,6 +185,7 @@ int do_close(int fd)
 int do_dup(int fd)
 {
         // NOT_YET_IMPLEMENTED("VFS: do_dup");
+
         if (fd < 0 || fd >= NFILES)
         {
                 dbg(DBG_PRINT, "(GRADING2B)\n");
@@ -230,7 +231,6 @@ int do_dup2(int ofd, int nfd)
                 dbg(DBG_PRINT, "(GRADING2B)\n");
                 return -EBADF;
         }
-
         file_t *file = fget(ofd);
         if (file == NULL)
         {
@@ -331,6 +331,7 @@ int do_mknod(const char *path, int mode, unsigned devid)
                 vput(dir_vnode);
                 return ret;
         }
+
 
         KASSERT(NULL != dir_vnode->vn_ops->mknod);
         ret = dir_vnode->vn_ops->mknod(dir_vnode, name, namelen, mode, devid);
@@ -508,6 +509,7 @@ int do_unlink(const char *path)
                 return -ENOTDIR;
         }
 
+
         vnode_t *res_vnode = NULL;
         ret = lookup(dir_vnode, name, namelen, &res_vnode);
         if (ret != 0)
@@ -524,6 +526,7 @@ int do_unlink(const char *path)
                 vput(res_vnode);
                 return -EPERM;
         }
+
 
         KASSERT(NULL != dir_vnode->vn_ops->unlink);
         ret = dir_vnode->vn_ops->unlink(dir_vnode, name, namelen);
@@ -575,7 +578,6 @@ int do_link(const char *from, const char *to)
                 // vput(from_vnode);
                 return -ENOTDIR;
         }
-
         vnode_t *res_vnode = NULL;
         ret = lookup(dir_vnode, name, namelen, &res_vnode); // lookup increments ref count of res_vnode
         if (ret == 0)
@@ -706,6 +708,7 @@ int do_getdent(int fd, struct dirent *dirp)
                 fput(file);
                 return -ENOTDIR;
         }
+
 
         int ret = file->f_vnode->vn_ops->readdir(file->f_vnode, file->f_pos, dirp);
         file->f_pos += ret;
